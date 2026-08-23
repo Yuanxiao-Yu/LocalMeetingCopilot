@@ -150,6 +150,7 @@
       <p class="subtitle">Offline-friendly bilingual guide for the local German/English meeting copilot. 本页面是本地可打开的中英双语操作指南。</p>
       <nav aria-label="Guide sections">
         <a href="#start">Quick Start / 快速开始</a>
+        <a href="#doctor">Doctor / 诊断</a>
         <a href="#mac">macOS</a>
         <a href="#windows">Windows</a>
         <a href="#controls">Dashboard</a>
@@ -181,6 +182,24 @@ source .venv/bin/activate
 python run.py --check
 python run.py --mock</code></pre>
           <p>建议先用 mock 模式确认 UI、Ollama、语言频道和翻译队列都正常，再开始调真实音频设备。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="doctor">
+      <h2>Diagnostics Bundle / 诊断包</h2>
+      <div class="grid">
+        <div class="lang">
+          <div class="lang-title">English</div>
+          <p>When a Windows or macOS machine behaves differently, generate a shareable diagnostics bundle.</p>
+          <pre><code>python run.py --doctor --profile de --preset fast --style meeting</code></pre>
+          <p>The folder is written under <code>logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/</code>. It includes system, config, audio device, Ollama, Git, and Python package metadata, but no audio recording or transcript contents.</p>
+        </div>
+        <div class="lang">
+          <div class="lang-title">中文</div>
+          <p>如果 Windows 或 macOS 机器表现和你本机不一样，可以生成一个可分享的诊断包。</p>
+          <pre><code>python run.py --doctor --profile de --preset fast --style meeting</code></pre>
+          <p>文件夹会写入 <code>logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/</code>，里面包含系统、配置、音频设备、Ollama、Git 和 Python package 元信息，但不会录音，也不会读取逐字稿内容。</p>
         </div>
       </div>
     </section>
@@ -222,6 +241,7 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
           <pre><code>py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe run.py --check
+.\.venv\Scripts\python.exe run.py --doctor --profile de
 .\.venv\Scripts\python.exe run.py --live --profile de</code></pre>
           <p>If PowerShell blocks scripts:</p>
           <pre><code>powershell -ExecutionPolicy Bypass -File .\scripts\windows_smoke.ps1 -Profile de</code></pre>
@@ -232,6 +252,7 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
           <pre><code>py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe run.py --check
+.\.venv\Scripts\python.exe run.py --doctor --profile de
 .\.venv\Scripts\python.exe run.py --live --profile de</code></pre>
           <p>如果 PowerShell 执行策略拦截脚本：</p>
           <pre><code>powershell -ExecutionPolicy Bypass -File .\scripts\windows_smoke.ps1 -Profile de</code></pre>
@@ -324,12 +345,14 @@ export LMC_VAD_MODE=auto</code></pre>
           <div class="lang-title">English</div>
           <p>Raw audio is not saved by default. Reports contain only transcript text and Chinese translations.</p>
           <pre><code>python run.py --mac-live --profile de --privacy</code></pre>
+          <p><code>python run.py --doctor</code> stores environment metadata only. It does not record audio or read transcript contents.</p>
           <p>Use debug audio only while diagnosing ASR problems. It writes completed speech chunks to <code>logs/debug_audio/</code>.</p>
         </div>
         <div class="lang">
           <div class="lang-title">中文</div>
           <p>默认不保存原始音频。报告只包含逐字稿和中文翻译。</p>
           <pre><code>python run.py --mac-live --profile de --privacy</code></pre>
+          <p><code>python run.py --doctor</code> 只保存环境元信息，不录音，也不读取逐字稿内容。</p>
           <p>只有排查 ASR 问题时才建议开启 debug audio，它会把切好的语音片段写入 <code>logs/debug_audio/</code>。</p>
         </div>
       </div>

@@ -60,6 +60,16 @@ python run.py --wav /absolute/path/to/meeting.wav
 
 The first WAV run may download a faster-whisper model into `models/`.
 
+## Diagnostics Bundle
+
+When a Windows or macOS machine behaves differently from yours, run:
+
+```bash
+python run.py --doctor --profile de --preset fast --style meeting
+```
+
+This writes a shareable folder under `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` with `report.md`, `system.json`, `audio_devices.json`, `ollama.json`, `config.json`, `git.txt`, and `python_packages.txt`. The bundle records environment metadata, device names, selected audio indexes, Ollama health, Git status, and recent log file names only. It does not record audio or transcript contents.
+
 ## Dashboard Controls
 
 The dashboard control panel now exposes the most useful runtime switches:
@@ -270,14 +280,15 @@ On macOS, `python run.py --live` intentionally reports that Windows WASAPI loopb
 
 1. Install Python 3.11 x64, Ollama, and the same Python requirements.
 2. Run `python run.py --check` and confirm Ollama plus input devices are visible.
-3. Run `python run.py --mock` to verify UI and translation first.
-4. Run `python run.py --live` in a real Teams/Zoom call.
-5. Confirm `[Me]` maps to the local microphone and remote audio maps to loopback.
-6. Confirm active speaker OCR. If it fails, the transcript should still fall back to `[Remote Participant]`.
+3. If anything looks wrong, run `python run.py --doctor --profile de` and share the generated `report.md` plus JSON files.
+4. Run `python run.py --mock` to verify UI and translation first.
+5. Run `python run.py --live` in a real Teams/Zoom call.
+6. Confirm `[Me]` maps to the local microphone and remote audio maps to loopback.
+7. Confirm active speaker OCR. If it fails, the transcript should still fall back to `[Remote Participant]`.
 
 ## Privacy
 
-The MVP does not save raw audio by default. Reports contain only transcript text and translations. Use `--privacy` or the dashboard Privacy toggle to preview reports without writing Markdown/JSON files. Use `--debug-audio` only while diagnosing ASR issues; it writes completed speech chunks into `logs/debug_audio/`.
+The MVP does not save raw audio by default. Reports contain only transcript text and translations. Use `--privacy` or the dashboard Privacy toggle to preview reports without writing Markdown/JSON files. `python run.py --doctor` stores environment metadata but no audio or transcript contents. Use `--debug-audio` only while diagnosing ASR issues; it writes completed speech chunks into `logs/debug_audio/`.
 
 # 中文操作指南
 
@@ -310,6 +321,16 @@ python run.py --check
 export LMC_MIC_DEVICE_INDEX=0
 python run.py --mic
 ```
+
+## 诊断包
+
+如果你的朋友在 Windows 或 macOS 上遇到和你本机不一样的问题，可以让她运行：
+
+```bash
+python run.py --doctor --profile de --preset fast --style meeting
+```
+
+命令会在 `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` 下生成一个可分享的诊断文件夹，包含 `report.md`、`system.json`、`audio_devices.json`、`ollama.json`、`config.json`、`git.txt` 和 `python_packages.txt`。诊断包只记录环境元信息、设备名称、当前音频 index、Ollama 状态、Git 状态和最近日志文件名，不录音，也不会读取逐字稿内容。
 
 ## macOS 双轨实验模式
 
@@ -565,11 +586,12 @@ python run.py --mac-live --profile de
 
 1. 安装 Python 3.11 x64、Ollama 和 Python requirements。
 2. 运行 `python run.py --check`，确认 Ollama、麦克风、loopback 设备可见。
-3. 先运行 `python run.py --mock` 验证 UI 和翻译。
-4. 在真实 Teams/Zoom 会议中运行 `python run.py --live --profile de`。
-5. 确认 `[Me]` 对应本地麦克风，远端发言对应 loopback。
-6. 确认 Teams/Zoom 说话人 OCR。如果失败，逐字稿仍会 fallback 到 `Remote Participant`。
+3. 如果环境不对，运行 `python run.py --doctor --profile de`，把生成的 `report.md` 和 JSON 文件发回来。
+4. 先运行 `python run.py --mock` 验证 UI 和翻译。
+5. 在真实 Teams/Zoom 会议中运行 `python run.py --live --profile de`。
+6. 确认 `[Me]` 对应本地麦克风，远端发言对应 loopback。
+7. 确认 Teams/Zoom 说话人 OCR。如果失败，逐字稿仍会 fallback 到 `Remote Participant`。
 
 ## 隐私
 
-默认不保存原始音频。报告只包含逐字稿和翻译。使用 `--privacy` 或 Dashboard 里的 Privacy 开关，可以只预览报告、不写 Markdown/JSON 到磁盘。只有开启 `--debug-audio` 时，才会把切好的语音片段写入 `logs/debug_audio/`，用于排查 ASR 问题。
+默认不保存原始音频。报告只包含逐字稿和翻译。使用 `--privacy` 或 Dashboard 里的 Privacy 开关，可以只预览报告、不写 Markdown/JSON 到磁盘。`python run.py --doctor` 只保存环境元信息，不录音，也不读取逐字稿内容。只有开启 `--debug-audio` 时，才会把切好的语音片段写入 `logs/debug_audio/`，用于排查 ASR 问题。
