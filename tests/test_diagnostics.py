@@ -5,11 +5,14 @@ import sys
 
 from config import AppConfig
 from diagnostics import (
+    collect_audio_info,
     collect_config_snapshot,
+    collect_ollama_info,
     collect_recent_logs,
     collect_system_info,
     command_result_text,
     create_diagnostics_bundle,
+    normalise_sounddevice_devices,
     safe_run,
 )
 
@@ -68,7 +71,117 @@ def test_recent_logs_only_records_metadata(tmp_path) -> None:
     assert "private transcript text" not in json.dumps(recent)
 
 
-def test_create_diagnostics_bundle_writes_core_files(tmp_path) -> None:
+def test_normalise_sounddevice_devices_keeps_stable_fields() -> None:
+    devices = [
+        {
+            "name": "Built-in Microphone",
+            "max_input_channels": 1,
+            "max_output_channels": 0,
+            "default_samplerate": 48000.0,
+            "hostapi": 0,
+            "extra": "ignored",
+        }
+    ]
+
+    normalised = normalise_sounddevice_devices(devices)
+
+    assert normalised == [
+        {
+            "index": 0,
+            "name": "Built-in Microphone",
+            "max_input_channels": 1,
+            "max_output_channels": 0,
+            "default_samplerate": 48000.0,
+            "hostapi": 0,
+        }
+    ]
+
+
+def test_collect_audio_info_records_sounddevice_error(monkeypatch) -> None:
+    import sounddevice
+
+    def fake_query_devices():
+        raise RuntimeError("no devices")
+
+    monkeypatch.setattr(sounddevice, "query_devices", fake_query_devices)
+
+    audio = collect_audio_info(AppConfig(), system_name="linux")
+
+    assert audio["sounddevice"]["available"] is False
+    assert "RuntimeError" in audio["sounddevice"]["error"]
+
+
+def test_collect_ollama_info_marks_model_from_list(monkeypatch) -> None:
+    import diagnostics
+
+    def fake_safe_run(command, cwd=None, timeout=10):
+        if command == ["ollama", "list"]:
+            return {
+                "command": command,
+                "available": True,
+                "returncode": 0,
+                "stdout": "NAME ID SIZE MODIFIED\nqwen2.5:3b-instruct abc 1 GB now\n",
+                "stderr": "",
+            }
+        return {
+            "command": command,
+            "available": True,
+            "returncode": 0,
+            "stdout": "ollama version 0.0.0\n",
+            "stderr": "",
+        }
+
+    class FakeRefiner:
+        def __init__(self, config):
+            self.config = config
+
+        def healthcheck_sync(self):
+            return "正常"
+
+    monkeypatch.setattr(diagnostics, "safe_run", fake_safe_run)
+    monkeypatch.setattr("llm_refiner.LLMRefiner", FakeRefiner)
+
+    info = collect_ollama_info(AppConfig())
+
+    assert info["health"] == "正常"
+    assert info["model_present_in_list"] is True
+
+
+def test_create_diagnostics_bundle_writes_core_files(monkeypatch, tmp_path) -> None:
+    import diagnostics
+
+    command_result = {
+        "command": ["mock"],
+        "available": True,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "",
+    }
+    monkeypatch.setattr(
+        diagnostics,
+        "collect_audio_info",
+        lambda _config: {
+            "sounddevice": {"available": True, "inputs": [], "outputs": [], "selected_mic": None},
+            "macos_remote": {"selected": None},
+            "windows_loopback": {"selected": None},
+        },
+    )
+    monkeypatch.setattr(
+        diagnostics,
+        "collect_ollama_info",
+        lambda _config: {
+            "health": "正常",
+            "model_present_in_list": True,
+            "cli_version": command_result,
+        },
+    )
+    monkeypatch.setattr(
+        diagnostics,
+        "collect_acceleration_info",
+        lambda _config: {"nvidia_detected": False, "apple_silicon": False, "hint": "CPU"},
+    )
+    monkeypatch.setattr(diagnostics, "safe_run", lambda *args, **kwargs: command_result)
+
     config = AppConfig(
         project_root=tmp_path,
         log_dir=tmp_path / "logs",
@@ -81,6 +194,8 @@ def test_create_diagnostics_bundle_writes_core_files(tmp_path) -> None:
 
     assert (bundle / "report.md").exists()
     assert (bundle / "system.json").exists()
+    assert (bundle / "audio_devices.json").exists()
+    assert (bundle / "ollama.json").exists()
     assert (bundle / "config.json").exists()
     assert (bundle / "git.txt").exists()
     assert (bundle / "python_packages.txt").exists()

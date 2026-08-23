@@ -36,10 +36,16 @@ def create_diagnostics_bundle(config: AppConfig, output_dir: str | Path | None =
     cfg = collect_config_snapshot(config)
     git = collect_git_info(config.project_root)
     packages = safe_run([sys.executable, "-m", "pip", "freeze"], timeout=20)
+    audio = collect_audio_info(config)
+    ollama = collect_ollama_info(config)
+    acceleration = collect_acceleration_info(config)
     recent_logs = collect_recent_logs(config.log_dir)
 
     _write_json(bundle_dir / "system.json", system)
     _write_json(bundle_dir / "config.json", cfg)
+    _write_json(bundle_dir / "audio_devices.json", audio)
+    _write_json(bundle_dir / "ollama.json", ollama)
+    _write_json(bundle_dir / "acceleration.json", acceleration)
     _write_text(bundle_dir / "git.txt", command_result_text(git))
     _write_text(bundle_dir / "python_packages.txt", command_result_text(packages))
     _write_json(bundle_dir / "recent_logs.json", recent_logs)
@@ -50,6 +56,9 @@ def create_diagnostics_bundle(config: AppConfig, output_dir: str | Path | None =
             "config": cfg,
             "git": git,
             "python_packages": packages,
+            "audio": audio,
+            "ollama": ollama,
+            "acceleration": acceleration,
             "recent_logs": recent_logs,
         }
     )
@@ -94,6 +103,161 @@ def collect_git_info(project_root: Path) -> CommandResult:
     for name, command in commands.items():
         results[name] = safe_run(command, cwd=project_root, timeout=5)
     return {"commands": results}
+
+
+def collect_audio_info(config: AppConfig, system_name: str | None = None) -> dict[str, Any]:
+    current_system = (system_name or platform.system()).lower()
+    info: dict[str, Any] = {
+        "system": current_system,
+        "sounddevice": {"available": False, "devices": [], "defaults": {}, "error": ""},
+        "macos_remote": {"applicable": current_system == "darwin"},
+        "windows_loopback": {"applicable": current_system == "windows"},
+    }
+    try:
+        import sounddevice
+
+        devices = normalise_sounddevice_devices(sounddevice.query_devices())
+        info["sounddevice"] = {
+            "available": True,
+            "devices": devices,
+            "defaults": {
+                "device": _json_safe(getattr(sounddevice.default, "device", None)),
+                "samplerate": _json_safe(getattr(sounddevice.default, "samplerate", None)),
+            },
+            "inputs": [device for device in devices if int(device.get("max_input_channels", 0)) > 0],
+            "outputs": [device for device in devices if int(device.get("max_output_channels", 0)) > 0],
+            "selected_mic": _sounddevice_device_by_index(devices, config.mic_device_index),
+            "error": "",
+        }
+    except Exception as exc:
+        info["sounddevice"]["error"] = f"{exc.__class__.__name__}: {exc}"
+
+    if current_system == "darwin":
+        info["macos_remote"] = collect_macos_remote_info(config)
+    if current_system == "windows":
+        info["windows_loopback"] = collect_windows_loopback_info(config)
+    return info
+
+
+def normalise_sounddevice_devices(devices: Any) -> list[dict[str, Any]]:
+    normalised = []
+    for index, device in enumerate(devices):
+        item = dict(device)
+        normalised.append(
+            {
+                "index": index,
+                "name": str(item.get("name") or ""),
+                "max_input_channels": _optional_int_value(item.get("max_input_channels")),
+                "max_output_channels": _optional_int_value(item.get("max_output_channels")),
+                "default_samplerate": _optional_float_value(item.get("default_samplerate")),
+                "hostapi": _optional_int_value(item.get("hostapi")),
+            }
+        )
+    return normalised
+
+
+def collect_macos_remote_info(config: AppConfig) -> dict[str, Any]:
+    try:
+        from audio_engine import _remote_input_device_candidates, _select_remote_input_device
+
+        candidates = _remote_input_device_candidates(config)
+        selected = _select_remote_input_device(config)
+    except Exception as exc:
+        return {
+            "applicable": True,
+            "available": False,
+            "candidates": [],
+            "selected": None,
+            "error": f"{exc.__class__.__name__}: {exc}",
+        }
+
+    return {
+        "applicable": True,
+        "available": bool(candidates),
+        "keywords": list(config.remote_device_keywords),
+        "candidates": [_normalise_candidate_device(device) for device in candidates],
+        "selected": _normalise_candidate_device(selected) if selected else None,
+        "error": "",
+    }
+
+
+def collect_windows_loopback_info(config: AppConfig) -> dict[str, Any]:
+    try:
+        import pyaudiowpatch as pyaudio  # type: ignore[import-not-found]
+
+        from audio_engine import (
+            _default_wasapi_output_device,
+            _loopback_device_candidates,
+            _select_wasapi_loopback_device,
+        )
+    except Exception as exc:
+        return {
+            "applicable": True,
+            "available": False,
+            "candidates": [],
+            "selected": None,
+            "default_output": None,
+            "error": f"{exc.__class__.__name__}: {exc}",
+        }
+
+    pa = pyaudio.PyAudio()
+    try:
+        candidates = _loopback_device_candidates(pa)
+        default_output = _default_wasapi_output_device(pa, pyaudio)
+        try:
+            selected = _select_wasapi_loopback_device(pa, pyaudio, config.loopback_device_index)
+            selected_error = ""
+        except Exception as exc:
+            selected = None
+            selected_error = f"{exc.__class__.__name__}: {exc}"
+    finally:
+        pa.terminate()
+
+    return {
+        "applicable": True,
+        "available": bool(candidates),
+        "candidates": [_normalise_wasapi_device(device) for device in candidates],
+        "selected": _normalise_wasapi_device(selected) if selected else None,
+        "default_output": _normalise_wasapi_device(default_output) if default_output else None,
+        "error": selected_error,
+    }
+
+
+def collect_ollama_info(config: AppConfig) -> dict[str, Any]:
+    version = safe_run(["ollama", "--version"], timeout=5)
+    models = safe_run(["ollama", "list"], timeout=8)
+    try:
+        from llm_refiner import LLMRefiner
+
+        health_config = config.model_copy(
+            update={"ollama_timeout_seconds": min(config.ollama_timeout_seconds, 5.0)}
+        )
+        health = LLMRefiner(health_config).healthcheck_sync()
+    except Exception as exc:
+        health = f"unavailable: {exc.__class__.__name__}: {exc}"
+
+    return {
+        "host": config.ollama_host,
+        "model": config.ollama_model,
+        "cli_version": version,
+        "cli_models": models,
+        "health": health,
+        "model_present_in_list": _model_present_in_ollama_list(config.ollama_model, models),
+    }
+
+
+def collect_acceleration_info(config: AppConfig) -> dict[str, Any]:
+    result = safe_run(
+        ["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader"],
+        timeout=3,
+    )
+    apple_silicon = config.is_macos and platform.machine() == "arm64"
+    return {
+        "nvidia_smi": result,
+        "nvidia_detected": result.get("returncode") == 0 and bool(str(result.get("stdout") or "").strip()),
+        "apple_silicon": apple_silicon,
+        "hint": _acceleration_hint(config, result, apple_silicon),
+    }
 
 
 def collect_recent_logs(log_dir: Path, limit: int = 20) -> list[dict[str, Any]]:
@@ -194,6 +358,9 @@ def render_report(data: dict[str, Any]) -> str:
     config = data["config"]
     git = data["git"]
     packages = data["python_packages"]
+    audio = data["audio"]
+    ollama = data["ollama"]
+    acceleration = data["acceleration"]
     recent_logs = data["recent_logs"]
     git_status = _stdout_from_nested_command(git, "status") or "(empty)"
     git_head = _stdout_from_nested_command(git, "head") or "(unknown)"
@@ -227,6 +394,24 @@ def render_report(data: dict[str, Any]) -> str:
         f"- Ollama: {config['ollama_model']} at {config['ollama_host']}",
         f"- Privacy: save_reports={config['save_reports_enabled']}, privacy_mode={config['privacy_mode']}",
         "",
+        "## Audio",
+        f"- sounddevice available: {audio['sounddevice']['available']}",
+        f"- input devices: {len(audio['sounddevice'].get('inputs', []))}",
+        f"- output devices: {len(audio['sounddevice'].get('outputs', []))}",
+        f"- selected mic: {_device_label(audio['sounddevice'].get('selected_mic'))}",
+        f"- macOS remote selected: {_device_label(audio['macos_remote'].get('selected'))}",
+        f"- Windows loopback selected: {_device_label(audio['windows_loopback'].get('selected'))}",
+        "",
+        "## Ollama",
+        f"- Health: {ollama['health']}",
+        f"- Model present in `ollama list`: {ollama['model_present_in_list']}",
+        f"- CLI version return code: {ollama['cli_version'].get('returncode')}",
+        "",
+        "## Acceleration",
+        f"- NVIDIA detected: {acceleration['nvidia_detected']}",
+        f"- Apple Silicon: {acceleration['apple_silicon']}",
+        f"- Hint: {acceleration['hint']}",
+        "",
         "## Python Packages",
         f"- `pip freeze` return code: {packages.get('returncode')}",
         "",
@@ -244,6 +429,92 @@ def render_report(data: dict[str, Any]) -> str:
 def _stdout_from_nested_command(result: CommandResult, key: str) -> str:
     command = result.get("commands", {}).get(key, {})
     return str(command.get("stdout") or "").strip()
+
+
+def _sounddevice_device_by_index(
+    devices: list[dict[str, Any]],
+    index: int | None,
+) -> dict[str, Any] | None:
+    if index is None:
+        return None
+    for device in devices:
+        if device.get("index") == index:
+            return device
+    return None
+
+
+def _normalise_candidate_device(device: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "index": _optional_int_value(device.get("index")),
+        "name": str(device.get("name") or ""),
+        "max_input_channels": _optional_int_value(device.get("max_input_channels")),
+        "max_output_channels": _optional_int_value(device.get("max_output_channels")),
+        "default_samplerate": _optional_float_value(device.get("default_samplerate")),
+    }
+
+
+def _normalise_wasapi_device(device: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "index": _optional_int_value(device.get("index")),
+        "name": str(device.get("name") or ""),
+        "is_loopback": bool(device.get("isLoopbackDevice")),
+        "max_input_channels": _optional_int_value(device.get("maxInputChannels")),
+        "max_output_channels": _optional_int_value(device.get("maxOutputChannels")),
+        "default_samplerate": _optional_float_value(device.get("defaultSampleRate")),
+    }
+
+
+def _model_present_in_ollama_list(model: str, result: CommandResult) -> bool:
+    if result.get("returncode") != 0:
+        return False
+    names = [line.split()[0] for line in str(result.get("stdout") or "").splitlines()[1:]]
+    return model in names
+
+
+def _acceleration_hint(config: AppConfig, nvidia_result: CommandResult, apple_silicon: bool) -> str:
+    if nvidia_result.get("returncode") == 0 and str(nvidia_result.get("stdout") or "").strip():
+        return "NVIDIA detected. On Windows, try LMC_ASR_DEVICE=cuda and LMC_ASR_COMPUTE_TYPE=float16."
+    if apple_silicon:
+        return "Apple Silicon detected. Current stable preset keeps faster-whisper on CPU int8."
+    if config.is_windows:
+        return "No NVIDIA GPU detected by nvidia-smi. CPU int8 is the safest default."
+    return "CPU int8 is the safest default for this platform."
+
+
+def _device_label(device: object) -> str:
+    if not isinstance(device, dict) or not device:
+        return "none"
+    index = device.get("index", "?")
+    name = device.get("name") or "unknown"
+    return f"[{index}] {name}"
+
+
+def _optional_int_value(value: object) -> int | None:
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_float_value(value: object) -> float | None:
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _json_safe(value: object) -> object:
+    if isinstance(value, tuple | list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, Path):
+        return str(value)
+    try:
+        json.dumps(value)
+    except TypeError:
+        return str(value)
+    return value
 
 
 def _bundle_dir(
