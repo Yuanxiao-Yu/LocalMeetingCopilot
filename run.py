@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 
+from diagnostics import run_doctor
 from main import run_app, run_environment_check
 
 
@@ -33,6 +34,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--no-mic-track", action="store_true", help="Disable local microphone track")
     parser.add_argument("--no-remote-track", action="store_true", help="Disable remote/loopback track")
     parser.add_argument("--check", action="store_true", help="Run environment checks and exit")
+    parser.add_argument("--doctor", action="store_true", help="Write a shareable diagnostics bundle")
     parser.add_argument("--no-autostart", dest="autostart", action="store_false")
     parser.set_defaults(autostart=True)
     args = parser.parse_args(argv)
@@ -49,6 +51,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.doctor:
+        return run_doctor(profile=args.profile, preset=args.preset, style=args.style)
     if args.check:
         return run_environment_check(profile=args.profile, preset=args.preset, style=args.style)
     return run_app(args)

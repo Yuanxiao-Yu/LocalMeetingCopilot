@@ -33,3 +33,10 @@ def test_parse_preset_style_and_privacy_flags() -> None:
     assert args.style == "meeting"
     assert args.privacy
     assert args.no_remote_track
+
+
+def test_parse_doctor_flag() -> None:
+    args = parse_args(["--doctor", "--profile", "de"])
+
+    assert args.doctor
+    assert args.profile == "de"
