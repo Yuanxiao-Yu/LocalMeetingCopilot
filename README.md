@@ -70,6 +70,24 @@ python run.py --doctor --profile de --preset fast --style meeting
 
 This writes a shareable folder under `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` with `report.md`, `system.json`, `audio_devices.json`, `ollama.json`, `config.json`, `git.txt`, and `python_packages.txt`. The bundle records environment metadata, device names, selected audio indexes, Ollama health, Git status, and recent log file names only. It does not record audio or transcript contents.
 
+## Audio Test And Crash Logs
+
+Before joining a real call, run a short audio/VAD calibration:
+
+```bash
+python run.py --audio-test --profile de --audio-test-seconds 12
+```
+
+The test does not start Whisper or Ollama. It prints live RMS/peak level, VAD state, received chunk count, speech starts, and completed VAD cuts for the mic plus the platform remote track. Use `--no-mic-track` or `--no-remote-track` to isolate one side.
+
+If the app exits unexpectedly, a crash report is written to:
+
+```text
+logs/crash/crash_YYYYMMDD_HHMMSS_xxxxxx.txt
+```
+
+The crash log contains Python/platform metadata and a traceback so the failure can be debugged without guessing.
+
 ## Dashboard Controls
 
 The dashboard control panel now exposes the most useful runtime switches:
@@ -331,6 +349,24 @@ python run.py --doctor --profile de --preset fast --style meeting
 ```
 
 命令会在 `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` 下生成一个可分享的诊断文件夹，包含 `report.md`、`system.json`、`audio_devices.json`、`ollama.json`、`config.json`、`git.txt` 和 `python_packages.txt`。诊断包只记录环境元信息、设备名称、当前音频 index、Ollama 状态、Git 状态和最近日志文件名，不录音，也不会读取逐字稿内容。
+
+## 音频测试与闪退日志
+
+进入真实会议前，可以先跑一个短音频/VAD 校准：
+
+```bash
+python run.py --audio-test --profile de --audio-test-seconds 12
+```
+
+这个测试不会启动 Whisper 或 Ollama，只会在终端显示麦克风和当前平台远端轨道的实时 RMS/peak 音量、VAD 状态、收到的 chunk 数、speech start 次数和完成切句次数。可以用 `--no-mic-track` 或 `--no-remote-track` 单独排查其中一边。
+
+如果程序意外退出，会把闪退报告写到：
+
+```text
+logs/crash/crash_YYYYMMDD_HHMMSS_xxxxxx.txt
+```
+
+闪退日志包含 Python/系统元信息和 traceback，后续可以直接根据堆栈定位问题，不用盲猜。
 
 ## macOS 双轨实验模式
 
