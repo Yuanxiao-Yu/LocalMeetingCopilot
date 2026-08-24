@@ -40,3 +40,11 @@ def test_parse_doctor_flag() -> None:
 
     assert args.doctor
     assert args.profile == "de"
+
+
+def test_parse_audio_test_flags() -> None:
+    args = parse_args(["--audio-test", "--audio-test-seconds", "3", "--no-mic-track"])
+
+    assert args.audio_test
+    assert args.audio_test_seconds == 3
+    assert args.no_mic_track

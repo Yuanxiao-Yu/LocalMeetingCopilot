@@ -34,6 +34,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--no-remote-track", action="store_true", help="Disable remote/loopback track")
     parser.add_argument("--check", action="store_true", help="Run environment checks and exit")
     parser.add_argument("--doctor", action="store_true", help="Write a shareable diagnostics bundle")
+    parser.add_argument("--audio-test", action="store_true", help="Run audio/VAD calibration and exit")
+    parser.add_argument("--audio-test-seconds", type=float, default=12.0, help="Audio test duration")
     parser.add_argument("--no-autostart", dest="autostart", action="store_false")
     parser.set_defaults(autostart=True)
     args = parser.parse_args(argv)
@@ -50,6 +52,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.audio_test:
+        from audio_test import run_audio_test
+
+        return run_audio_test(config=_runtime_config_from_args(args), duration_seconds=args.audio_test_seconds)
     if args.doctor:
         from diagnostics import run_doctor
 
@@ -62,6 +68,23 @@ def main() -> int:
     from main import run_app
 
     return run_app(args)
+
+
+def _runtime_config_from_args(args: argparse.Namespace):
+    from config import load_config
+
+    config = load_config(profile=args.profile, preset=args.preset, translation_style=args.style)
+    if args.privacy:
+        config.privacy_mode = True
+        config.save_reports_enabled = False
+    if args.debug_audio:
+        config.debug_audio_enabled = True
+        config.ensure_directories()
+    if args.no_mic_track:
+        config.capture_mic_enabled = False
+    if args.no_remote_track:
+        config.capture_remote_enabled = False
+    return config
 
 
 if __name__ == "__main__":
