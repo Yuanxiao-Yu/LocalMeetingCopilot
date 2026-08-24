@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from diagnostics import run_doctor
-from main import run_app, run_environment_check
+from crash_reporter import run_with_crash_logging
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -52,11 +51,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     if args.doctor:
+        from diagnostics import run_doctor
+
         return run_doctor(profile=args.profile, preset=args.preset, style=args.style)
     if args.check:
+        from main import run_environment_check
+
         return run_environment_check(profile=args.profile, preset=args.preset, style=args.style)
+
+    from main import run_app
+
     return run_app(args)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run_with_crash_logging(main))
