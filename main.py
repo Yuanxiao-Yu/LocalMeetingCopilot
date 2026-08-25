@@ -33,6 +33,7 @@ from config import (
 )
 from llm_refiner import LLMRefiner
 from meeting_types import TranscriptDraft, TranscriptEntry
+from performance_logger import PerformanceTimelineLogger
 from summarizer import MeetingSummarizer
 from ui.dashboard_window import MeetingDashboard
 from ui.overlay_window import SubtitleOverlay
@@ -75,6 +76,8 @@ class TranslationTask(QRunnable):
                 def emit_partial(partial_text: str) -> None:
                     nonlocal last_emit
                     now = time.perf_counter()
+                    if self.draft.translation_first_token_at is None:
+                        self.draft.translation_first_token_at = now
                     if now - last_emit < 0.08:
                         return
                     last_emit = now
@@ -256,6 +259,7 @@ class MeetingAppController(QObject):
         self._auto_summary_pending = False
         self._auto_export_after_summary = False
         self._suppress_audio_finished_auto_summary = False
+        self.performance_logger = PerformanceTimelineLogger(self.config)
         self._shutting_down = False
         self._merge_buffer: TranscriptDraft | None = None
         self._merge_timer = QTimer(self)
@@ -450,6 +454,8 @@ class MeetingAppController(QObject):
         if len(self._translation_queue) >= self.config.translation_queue_limit:
             dropped = self._translation_queue.popleft()
             self._set_status(f"Translation queue full; dropped oldest [{dropped.speaker}] sentence")
+        if draft.translation_queued_at is None:
+            draft.translation_queued_at = time.perf_counter()
         self._translation_queue.append(draft)
         self.dashboard.set_queue_depth(len(self._translation_queue))
         self._drain_translation_queue()
@@ -460,6 +466,8 @@ class MeetingAppController(QObject):
         if len(self._translation_queue) >= self.config.translation_queue_limit:
             dropped = self._translation_queue.popleft()
             self._set_status(f"Translation queue full; dropped oldest [{dropped.speaker}] sentence")
+        if draft.translation_queued_at is None:
+            draft.translation_queued_at = time.perf_counter()
         self._translation_queue.append(draft)
         self.dashboard.set_queue_depth(len(self._translation_queue))
         self._drain_translation_queue()
@@ -470,6 +478,7 @@ class MeetingAppController(QObject):
         if self._translation_busy or not self._translation_queue:
             return
         draft = self._translation_queue.popleft()
+        draft.translation_dequeued_at = time.perf_counter()
         self.dashboard.set_queue_depth(len(self._translation_queue))
         self._translation_busy = True
         self._set_status(f"Translating [{draft.speaker}]")
@@ -557,14 +566,19 @@ class MeetingAppController(QObject):
             captured_at=draft.captured_at,
             asr_started_at=draft.asr_started_at,
             asr_completed_at=draft.asr_completed_at,
+            translation_queued_at=draft.translation_queued_at,
+            translation_dequeued_at=draft.translation_dequeued_at,
             translation_started_at=draft.translation_started_at,
+            translation_first_token_at=draft.translation_first_token_at,
             translation_completed_at=draft.translation_completed_at,
             translation_source=draft.translation_source,
         )
         self.summarizer.add_entry(entry)
+        self.performance_logger.append_entry(entry)
         self.overlay.update_final(entry)
         self.dashboard.add_entry(entry)
         self.dashboard.set_latency(entry.latency_label)
+        self.dashboard.set_performance(entry.performance_label)
         self._set_status(f"Ready | {entry.latency_label}" if entry.latency_label else "Ready")
 
     @Slot()

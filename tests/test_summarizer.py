@@ -77,3 +77,25 @@ def test_transcript_entry_latency_label_marks_local_translation() -> None:
     )
 
     assert "local" in entry.latency_label
+
+
+def test_transcript_entry_performance_label_includes_queue_and_first_token() -> None:
+    entry = TranscriptEntry(
+        speaker="Remote Participant",
+        original_text="Wir starten.",
+        chinese_translation="我们开始。",
+        start_time=3.0,
+        end_time=5.0,
+        captured_at=10.0,
+        asr_started_at=10.1,
+        asr_completed_at=10.6,
+        translation_queued_at=10.7,
+        translation_dequeued_at=11.0,
+        translation_started_at=11.1,
+        translation_first_token_at=11.3,
+        translation_completed_at=12.3,
+    )
+
+    assert "audio 2.0s" in entry.performance_label
+    assert "queue 0.3s" in entry.performance_label
+    assert "first 0.2s" in entry.performance_label

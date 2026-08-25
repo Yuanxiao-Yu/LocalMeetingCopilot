@@ -88,6 +88,8 @@ class MeetingDashboard(QMainWindow):
         )
         self.queue_label = QLabel("Translation queue: 0")
         self.latency_label = QLabel("Latency: n/a")
+        self.performance_label = QLabel("Performance: n/a")
+        self.performance_label.setWordWrap(True)
         self.preview_label = QLabel("No active speech")
         self.preview_label.setWordWrap(True)
         self.report_view = QTextEdit()
@@ -187,6 +189,7 @@ class MeetingDashboard(QMainWindow):
         right_layout.addWidget(self.model_label)
         right_layout.addWidget(self.queue_label)
         right_layout.addWidget(self.latency_label)
+        right_layout.addWidget(self.performance_label)
         right_layout.addWidget(QLabel("Live Preview"))
         right_layout.addWidget(self.preview_label)
         right_layout.addWidget(QLabel("Report"))
@@ -263,6 +266,9 @@ class MeetingDashboard(QMainWindow):
 
     def set_latency(self, label: str) -> None:
         self.latency_label.setText(f"Latency: {label or 'n/a'}")
+
+    def set_performance(self, label: str) -> None:
+        self.performance_label.setText(f"Performance: {label or 'n/a'}")
 
     def set_preview(self, speaker: str, text: str) -> None:
         self.preview_label.setText(f"[{speaker}] {text}")

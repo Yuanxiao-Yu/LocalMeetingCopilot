@@ -92,6 +92,7 @@ def test_runtime_settings_roundtrip(tmp_path) -> None:
         translation_cache_persist_enabled=False,
         translation_cache_max_entries=32,
         translation_cache_ttl_days=7,
+        performance_logging_enabled=False,
         speaker_aliases={"Remote Participant": "Anna Schmidt"},
     )
 
@@ -114,6 +115,7 @@ def test_runtime_settings_roundtrip(tmp_path) -> None:
     assert loaded["translation_cache_persist_enabled"] is False
     assert loaded["translation_cache_max_entries"] == 32
     assert loaded["translation_cache_ttl_days"] == 7
+    assert loaded["performance_logging_enabled"] is False
     assert loaded["speaker_aliases"] == {"Remote Participant": "Anna Schmidt"}
 
 

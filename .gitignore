@@ -12,6 +12,7 @@ logs/*.json
 logs/*.md
 logs/crash/
 logs/diagnostics/
+logs/performance/
 models/*
 !models/.gitkeep
 !logs/.gitkeep

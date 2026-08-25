@@ -23,7 +23,10 @@ class TranscriptDraft:
     captured_at: float = field(default_factory=perf_counter)
     asr_started_at: float | None = None
     asr_completed_at: float | None = None
+    translation_queued_at: float | None = None
+    translation_dequeued_at: float | None = None
     translation_started_at: float | None = None
+    translation_first_token_at: float | None = None
     translation_completed_at: float | None = None
     translation_source: str = "llm"
 
@@ -41,7 +44,10 @@ class TranscriptEntry:
     captured_at: float | None = None
     asr_started_at: float | None = None
     asr_completed_at: float | None = None
+    translation_queued_at: float | None = None
+    translation_dequeued_at: float | None = None
     translation_started_at: float | None = None
+    translation_first_token_at: float | None = None
     translation_completed_at: float | None = None
     translation_source: str = "llm"
     created_at: datetime = field(default_factory=datetime.now)
@@ -66,6 +72,14 @@ class TranscriptEntry:
         return _duration_ms(self.translation_started_at, self.translation_completed_at)
 
     @property
+    def translation_queue_latency_ms(self) -> float | None:
+        return _duration_ms(self.translation_queued_at, self.translation_dequeued_at)
+
+    @property
+    def translation_first_token_latency_ms(self) -> float | None:
+        return _duration_ms(self.translation_started_at, self.translation_first_token_at)
+
+    @property
     def total_latency_ms(self) -> float | None:
         return _duration_ms(self.captured_at, self.translation_completed_at)
 
@@ -83,6 +97,26 @@ class TranscriptEntry:
         if self.total_latency_ms is not None:
             parts.append(f"total {self.total_latency_ms / 1000:0.1f}s")
         return " / ".join(parts)
+
+    @property
+    def performance_label(self) -> str:
+        parts: list[str] = []
+        audio_ms = _duration_ms(self.start_time, self.end_time)
+        if audio_ms is not None:
+            parts.append(f"audio {audio_ms / 1000:0.1f}s")
+        if self.translation_queue_latency_ms is not None:
+            parts.append(f"queue {self.translation_queue_latency_ms / 1000:0.1f}s")
+        if self.asr_latency_ms is not None:
+            parts.append(f"ASR {self.asr_latency_ms / 1000:0.1f}s")
+        if self.translation_first_token_latency_ms is not None:
+            parts.append(f"first {self.translation_first_token_latency_ms / 1000:0.1f}s")
+        if self.translation_source in {"cache", "local"}:
+            parts.append(self.translation_source)
+        elif self.translation_latency_ms is not None:
+            parts.append(f"LLM {self.translation_latency_ms / 1000:0.1f}s")
+        if self.total_latency_ms is not None:
+            parts.append(f"total {self.total_latency_ms / 1000:0.1f}s")
+        return " | ".join(parts)
 
     def to_json_dict(self) -> dict[str, Any]:
         data = asdict(self)

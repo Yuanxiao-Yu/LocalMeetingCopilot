@@ -242,6 +242,7 @@ class AppConfig(BaseModel):
     capture_mic_enabled: bool = True
     capture_remote_enabled: bool = True
     latency_diagnostics_enabled: bool = True
+    performance_logging_enabled: bool = True
     warmup_enabled: bool = True
     shutdown_wait_ms: int = 8000
     speaker_aliases: dict[str, str] = Field(default_factory=dict)
@@ -255,6 +256,9 @@ class AppConfig(BaseModel):
     )
     translation_cache_file: Path = Field(
         default_factory=lambda: _PROJECT_ROOT / "logs" / "cache" / "translation_cache.jsonl"
+    )
+    performance_log_dir: Path = Field(
+        default_factory=lambda: _PROJECT_ROOT / "logs" / "performance"
     )
 
     overlay_width: int = 920
@@ -281,6 +285,8 @@ class AppConfig(BaseModel):
             and not self.privacy_mode
         ):
             self.translation_cache_file.parent.mkdir(parents=True, exist_ok=True)
+        if self.performance_logging_enabled and not self.privacy_mode:
+            self.performance_log_dir.mkdir(parents=True, exist_ok=True)
 
     @property
     def language_profile_label(self) -> str:
@@ -438,6 +444,10 @@ def load_config(
             os.getenv("LMC_PARTIAL_SKIP_WHEN_ASR_BUSY"),
             _setting_bool(saved, "partial_skip_when_asr_busy", True),
         ),
+        performance_logging_enabled=_optional_bool(
+            os.getenv("LMC_PERFORMANCE_LOGGING"),
+            _setting_bool(saved, "performance_logging_enabled", True),
+        ),
         warmup_enabled=_optional_bool(
             os.getenv("LMC_WARMUP"),
             _setting_bool(saved, "warmup_enabled", True),
@@ -481,6 +491,7 @@ def runtime_settings_payload(config: AppConfig) -> dict[str, Any]:
         "debug_audio_enabled": config.debug_audio_enabled,
         "partial_subtitles_enabled": config.partial_subtitles_enabled,
         "partial_skip_when_asr_busy": config.partial_skip_when_asr_busy,
+        "performance_logging_enabled": config.performance_logging_enabled,
         "warmup_enabled": config.warmup_enabled,
         "shutdown_wait_ms": config.shutdown_wait_ms,
         "vad_mode": config.vad_mode,
