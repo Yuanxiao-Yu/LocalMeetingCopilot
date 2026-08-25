@@ -101,6 +101,8 @@ The dashboard control panel now exposes the most useful runtime switches:
 - Auto summary on End.
 - VAD sensitivity slider for more aggressive or more conservative sentence cuts.
 - Latency diagnostics showing ASR, LLM, and total time per translated sentence.
+- Live audio meters for Mic and Remote, including VAD speech/idle state.
+- Performance timeline summary for the latest final subtitle.
 - Speaker correction: select a transcript row, rename `Remote Participant`, and apply it to future matching speech.
 - Runtime settings are saved to `settings.json` and restored on the next launch.
 
@@ -176,9 +178,10 @@ export LMC_OLLAMA_TIMEOUT_SECONDS=20
 export LMC_SHUTDOWN_WAIT_MS=8000
 export LMC_TRANSLATION_CACHE=1
 export LMC_TRANSLATION_CACHE_PERSIST=1
+export LMC_PERFORMANCE_LOGGING=1
 ```
 
-Warmup loads Whisper and pings Ollama shortly after startup. Common filler phrases such as `ja`, `genau`, `okay`, and `mhm` use local translations instead of waiting for Ollama. Short sentences automatically use smaller Ollama output limits. Repeated final-sentence translations are cached; disk cache is stored at `logs/cache/translation_cache.jsonl` only when privacy mode is off. Shutdown waits briefly for background translation before exiting.
+Warmup loads Whisper and pings Ollama shortly after startup. Common filler phrases such as `ja`, `genau`, `okay`, and `mhm` use local translations instead of waiting for Ollama. Short sentences automatically use smaller Ollama output limits. Repeated final-sentence translations are cached; disk cache is stored at `logs/cache/translation_cache.jsonl` only when privacy mode is off. Performance timeline records are stored at `logs/performance/performance_YYYYMMDD.jsonl` only when privacy mode is off; they include timing metadata and character counts, not transcript text. Shutdown waits briefly for background translation before exiting.
 
 Custom vocabulary lives in:
 
@@ -421,6 +424,8 @@ Dashboard 现在可以直接配置常用运行参数：
 - End 后自动总结开关。
 - VAD sensitivity 滑条，可以调更灵敏或更保守的断句。
 - 每句话的 ASR、LLM、总延迟显示。
+- Mic 和 Remote 实时音量条，并显示 VAD 当前是 speech 还是 idle。
+- 最新完整字幕的 performance timeline 摘要。
 - 说话人修正：选中逐字稿行，把 `Remote Participant` 改成真实姓名，后续相同说话人会自动沿用。
 - 运行时设置会保存到 `settings.json`，下次启动自动恢复。
 
@@ -496,9 +501,10 @@ export LMC_OLLAMA_TIMEOUT_SECONDS=20
 export LMC_SHUTDOWN_WAIT_MS=8000
 export LMC_TRANSLATION_CACHE=1
 export LMC_TRANSLATION_CACHE_PERSIST=1
+export LMC_PERFORMANCE_LOGGING=1
 ```
 
-Warmup 会在启动后提前加载 Whisper 并唤醒 Ollama。`ja`、`genau`、`okay`、`mhm` 这类常见语气词会走本地翻译，不再等待 Ollama。短句会自动使用更小的 Ollama 输出上限。重复的完整句翻译会缓存；隐私模式关闭时才会把磁盘缓存写到 `logs/cache/translation_cache.jsonl`。退出时会短暂等待后台翻译收尾。
+Warmup 会在启动后提前加载 Whisper 并唤醒 Ollama。`ja`、`genau`、`okay`、`mhm` 这类常见语气词会走本地翻译，不再等待 Ollama。短句会自动使用更小的 Ollama 输出上限。重复的完整句翻译会缓存；隐私模式关闭时才会把磁盘缓存写到 `logs/cache/translation_cache.jsonl`。Performance timeline 会写到 `logs/performance/performance_YYYYMMDD.jsonl`，只包含耗时元信息和字符数，不包含逐字稿正文；隐私模式开启时不会写入。退出时会短暂等待后台翻译收尾。
 
 ## 自定义词库
 

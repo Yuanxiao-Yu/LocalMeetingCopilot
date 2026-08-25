@@ -294,6 +294,8 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
             <li>Toggle mic/remote tracks, report saving, privacy mode, and debug WAV.</li>
             <li>Enable auto summary on End and tune <code>VAD Sensitivity</code> for faster or safer cuts.</li>
             <li>Latency shows ASR, LLM, and total time per translated sentence.</li>
+            <li>Audio meters show live Mic/Remote RMS level and VAD speech/idle state.</li>
+            <li>Performance shows the latest final subtitle timeline; JSONL records are written to <code>logs/performance/</code> when privacy mode is off.</li>
             <li>Select a transcript row to rename <code>Remote Participant</code>; the alias is remembered for future speech.</li>
             <li>Runtime choices are saved to local <code>settings.json</code> and restored on the next launch.</li>
           </ul>
@@ -308,6 +310,8 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
             <li>可以开关本地/远端轨道、报告保存、隐私模式和 debug WAV。</li>
             <li>可以开启 End 后自动总结，并用 <code>VAD Sensitivity</code> 调整断句灵敏度。</li>
             <li>延迟诊断会显示每句话的 ASR、LLM 和总耗时。</li>
+            <li>Audio meters 会显示 Mic/Remote 的实时 RMS 音量和 VAD speech/idle 状态。</li>
+            <li>Performance 会显示最新完整字幕的时间线；隐私模式关闭时，JSONL 会写到 <code>logs/performance/</code>。</li>
             <li>选中逐字稿后可以把 <code>Remote Participant</code> 改成真实姓名，后续会自动记住。</li>
             <li>运行时选择会保存到本地 <code>settings.json</code>，下次启动自动恢复。</li>
           </ul>
@@ -334,7 +338,7 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
           <pre><code>python -m pip install -r requirements-vad.txt
 export LMC_VAD_MODE=auto</code></pre>
           <p>For lower first-sentence latency, keep <code>LMC_WARMUP=1</code>. To protect final subtitles from CPU contention, keep <code>LMC_PARTIAL_SKIP_WHEN_ASR_BUSY=1</code>. Common fillers are translated locally, short sentences use smaller Ollama output limits, repeated final translations use cache, and <code>LMC_SHUTDOWN_WAIT_MS</code> bounds how long exit waits for background work.</p>
-          <p>Disk translation cache is stored at <code>logs/cache/translation_cache.jsonl</code> only when privacy mode is off.</p>
+          <p>Disk translation cache is stored at <code>logs/cache/translation_cache.jsonl</code> only when privacy mode is off. Performance timeline JSONL is stored at <code>logs/performance/</code> only when privacy mode is off, and records timing metadata instead of transcript text.</p>
           <p>If Ollama requests hang or app shutdown feels too slow, set <code>LMC_OLLAMA_TIMEOUT_SECONDS=20</code>.</p>
         </div>
         <div class="lang">
@@ -353,7 +357,7 @@ export LMC_VAD_MODE=auto</code></pre>
           <pre><code>python -m pip install -r requirements-vad.txt
 export LMC_VAD_MODE=auto</code></pre>
           <p>为了降低第一句话延迟，建议保持 <code>LMC_WARMUP=1</code>。为了避免 partial 抢占正式字幕 CPU，建议保持 <code>LMC_PARTIAL_SKIP_WHEN_ASR_BUSY=1</code>。常见语气词会本地翻译，短句会自动使用更小的 Ollama 输出上限，重复完整句会走缓存，<code>LMC_SHUTDOWN_WAIT_MS</code> 控制退出时等待后台任务的最长时间。</p>
-          <p>隐私模式关闭时，磁盘翻译缓存会保存在 <code>logs/cache/translation_cache.jsonl</code>。</p>
+          <p>隐私模式关闭时，磁盘翻译缓存会保存在 <code>logs/cache/translation_cache.jsonl</code>。Performance timeline JSONL 会写到 <code>logs/performance/</code>，只记录耗时元信息，不包含逐字稿正文。</p>
           <p>如果 Ollama 请求卡住，或者退出时等待太久，可以设置 <code>LMC_OLLAMA_TIMEOUT_SECONDS=20</code>。</p>
         </div>
       </div>
