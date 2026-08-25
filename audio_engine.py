@@ -399,6 +399,7 @@ class AudioEngine(QObject):
     speech_started = Signal(str)
     partial_speech_ready = Signal(object)
     sentence_completed = Signal(object)
+    audio_level_changed = Signal(str, float, bool)
 
     preview_updated = Signal(str, str)
     status_changed = Signal(str)
@@ -651,6 +652,7 @@ class AudioEngine(QObject):
             chunk = self._normalise_mic_chunk(payload)
             self.mic_chunk_received.emit(chunk)
             started, completed, rms = self._mic_vad.accept(chunk)
+            self.audio_level_changed.emit("mic", rms, self._mic_vad.in_speech)
             if started:
                 self.speech_started.emit("mic")
                 self.preview_updated.emit("Me", "Listening...")
@@ -780,6 +782,7 @@ class AudioEngine(QObject):
             chunk = self._normalise_loopback_chunk(payload)
             self.loopback_chunk_received.emit(chunk)
             started, completed, rms = self._loopback_vad.accept(chunk)
+            self.audio_level_changed.emit("loopback", rms, self._loopback_vad.in_speech)
             if started:
                 self.speech_started.emit("loopback")
                 self.preview_updated.emit("Remote Participant", "Listening...")

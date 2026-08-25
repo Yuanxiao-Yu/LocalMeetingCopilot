@@ -301,6 +301,7 @@ class MeetingAppController(QObject):
 
         self.audio_engine = AudioEngine(self.config, mode=self.args.mode)
         self.audio_engine.preview_updated.connect(self._on_preview)
+        self.audio_engine.audio_level_changed.connect(self._on_audio_level)
         self.audio_engine.partial_speech_ready.connect(self._on_partial_draft)
         self.audio_engine.sentence_completed.connect(self._on_draft)
         self.audio_engine.status_changed.connect(self._set_status)
@@ -401,6 +402,10 @@ class MeetingAppController(QObject):
     def _on_preview(self, speaker: str, text: str) -> None:
         self.overlay.update_preview(speaker, text)
         self.dashboard.set_preview(speaker, text)
+
+    @Slot(str, float, bool)
+    def _on_audio_level(self, track_type: str, rms: float, in_speech: bool) -> None:
+        self.dashboard.set_audio_level(track_type, rms, in_speech)
 
     @Slot(object)
     def _on_partial_draft(self, draft: TranscriptDraft) -> None:

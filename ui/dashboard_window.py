@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QProgressBar,
     QPushButton,
     QSlider,
     QSplitter,
@@ -90,6 +91,14 @@ class MeetingDashboard(QMainWindow):
         self.latency_label = QLabel("Latency: n/a")
         self.performance_label = QLabel("Performance: n/a")
         self.performance_label.setWordWrap(True)
+        self.mic_level_bar = QProgressBar()
+        self.remote_level_bar = QProgressBar()
+        self.mic_level_label = QLabel(_audio_level_text("Mic", 0.0, False))
+        self.remote_level_label = QLabel(_audio_level_text("Remote", 0.0, False))
+        for bar in (self.mic_level_bar, self.remote_level_bar):
+            bar.setRange(0, 100)
+            bar.setTextVisible(False)
+            bar.setFixedHeight(12)
         self.preview_label = QLabel("No active speech")
         self.preview_label.setWordWrap(True)
         self.report_view = QTextEdit()
@@ -190,6 +199,9 @@ class MeetingDashboard(QMainWindow):
         right_layout.addWidget(self.queue_label)
         right_layout.addWidget(self.latency_label)
         right_layout.addWidget(self.performance_label)
+        right_layout.addWidget(QLabel("Audio Levels"))
+        right_layout.addLayout(_meter_row(self.mic_level_label, self.mic_level_bar))
+        right_layout.addLayout(_meter_row(self.remote_level_label, self.remote_level_bar))
         right_layout.addWidget(QLabel("Live Preview"))
         right_layout.addWidget(self.preview_label)
         right_layout.addWidget(QLabel("Report"))
@@ -236,6 +248,15 @@ class MeetingDashboard(QMainWindow):
             QPushButton:hover {
                 background: #EEF5FF;
             }
+            QProgressBar {
+                border: 1px solid #C7CED9;
+                border-radius: 4px;
+                background: #EEF1F5;
+            }
+            QProgressBar::chunk {
+                border-radius: 3px;
+                background: #2878D7;
+            }
             """
         )
         self.set_running_state(False)
@@ -256,6 +277,8 @@ class MeetingDashboard(QMainWindow):
         self.end_button.setEnabled(running)
         self.export_button.setEnabled(True)
         self.summary_button.setEnabled(True)
+        if not running:
+            self.reset_audio_levels()
 
     def set_summary_running(self, running: bool) -> None:
         self.summary_button.setEnabled(not running)
@@ -269,6 +292,18 @@ class MeetingDashboard(QMainWindow):
 
     def set_performance(self, label: str) -> None:
         self.performance_label.setText(f"Performance: {label or 'n/a'}")
+
+    def set_audio_level(self, track_type: str, rms: float, in_speech: bool) -> None:
+        if track_type == "mic":
+            self.mic_level_bar.setValue(_rms_to_percent(rms))
+            self.mic_level_label.setText(_audio_level_text("Mic", rms, in_speech))
+        else:
+            self.remote_level_bar.setValue(_rms_to_percent(rms))
+            self.remote_level_label.setText(_audio_level_text("Remote", rms, in_speech))
+
+    def reset_audio_levels(self) -> None:
+        self.set_audio_level("mic", 0.0, False)
+        self.set_audio_level("loopback", 0.0, False)
 
     def set_preview(self, speaker: str, text: str) -> None:
         self.preview_label.setText(f"[{speaker}] {text}")
@@ -532,3 +567,23 @@ def _looks_like_action(entry: TranscriptEntry) -> bool:
         "bitte",
     )
     return entry.speaker == "Me" or any(marker in combined for marker in markers)
+
+
+def _meter_row(label: QLabel, bar: QProgressBar) -> QHBoxLayout:
+    row = QHBoxLayout()
+    row.setSpacing(8)
+    label.setMinimumWidth(118)
+    row.addWidget(label)
+    row.addWidget(bar, 1)
+    return row
+
+
+def _rms_to_percent(rms: float, reference: float = 0.08) -> int:
+    if rms <= 0:
+        return 0
+    return min(100, max(0, int((rms / max(reference, 0.0001)) * 100)))
+
+
+def _audio_level_text(name: str, rms: float, in_speech: bool) -> str:
+    state = "speech" if in_speech else "idle"
+    return f"{name}: {rms:0.3f} {state}"
