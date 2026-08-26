@@ -6,9 +6,11 @@ import sounddevice as sd
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QFormLayout,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -26,6 +28,13 @@ from PySide6.QtWidgets import (
 
 from config import AppConfig, load_config
 from meeting_types import TranscriptEntry
+from performance_stats import (
+    LatencyMetricStats,
+    build_performance_stats,
+    format_metric_line,
+    format_source_mix,
+    metric_progress_percent,
+)
 
 
 class MeetingDashboard(QMainWindow):
@@ -41,6 +50,8 @@ class MeetingDashboard(QMainWindow):
         super().__init__()
         self.config = config or load_config()
         self._entries: list[TranscriptEntry] = []
+        self._performance_entries: list[TranscriptEntry] = []
+        self.performance_window_size = 20
 
         self.setWindowTitle("LocalMeetingCopilot")
         self.resize(1180, 760)
@@ -91,6 +102,24 @@ class MeetingDashboard(QMainWindow):
         self.latency_label = QLabel("Latency: n/a")
         self.performance_label = QLabel("Performance: n/a")
         self.performance_label.setWordWrap(True)
+        self.performance_window_label = QLabel("Latency window: 0/20")
+        self.performance_source_label = QLabel("LLM 0 | cache 0 | local 0")
+        self.performance_metric_labels: dict[str, QLabel] = {}
+        self.performance_metric_bars: dict[str, QProgressBar] = {}
+        performance_grid = QGridLayout()
+        performance_grid.setHorizontalSpacing(8)
+        performance_grid.setVerticalSpacing(6)
+        for row, key in enumerate(("asr", "llm", "queue", "total")):
+            metric_label = QLabel(f"{key.upper()}: n/a")
+            metric_label.setWordWrap(True)
+            metric_bar = QProgressBar()
+            metric_bar.setRange(0, 100)
+            metric_bar.setTextVisible(False)
+            metric_bar.setFixedHeight(10)
+            self.performance_metric_labels[key] = metric_label
+            self.performance_metric_bars[key] = metric_bar
+            performance_grid.addWidget(metric_label, row, 0)
+            performance_grid.addWidget(metric_bar, row, 1)
         self.mic_level_bar = QProgressBar()
         self.remote_level_bar = QProgressBar()
         self.mic_level_label = QLabel(_audio_level_text("Mic", 0.0, False))
@@ -138,6 +167,25 @@ class MeetingDashboard(QMainWindow):
         self.preset_combo.addItem("Fast", "fast")
         self.preset_combo.addItem("Balanced", "balanced")
         self.preset_combo.addItem("Accurate", "accurate")
+        self.preset_button_group = QButtonGroup(self)
+        self.preset_button_group.setExclusive(True)
+        self.preset_fast_button = QPushButton("Fast")
+        self.preset_balanced_button = QPushButton("Balanced")
+        self.preset_accurate_button = QPushButton("Accurate")
+        self._preset_buttons = (
+            (self.preset_fast_button, "fast"),
+            (self.preset_balanced_button, "balanced"),
+            (self.preset_accurate_button, "accurate"),
+        )
+        preset_button_row = QHBoxLayout()
+        preset_button_row.setSpacing(6)
+        for button, preset in self._preset_buttons:
+            button.setCheckable(True)
+            button.clicked.connect(
+                lambda _checked=False, preset=preset: self._select_quick_preset(preset)
+            )
+            self.preset_button_group.addButton(button)
+            preset_button_row.addWidget(button)
         self.style_combo = QComboBox()
         self.style_combo.addItem("Meeting Notes", "meeting")
         self.style_combo.addItem("Literal", "literal")
@@ -164,6 +212,7 @@ class MeetingDashboard(QMainWindow):
         settings_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         settings_layout.addRow("Profile", self.profile_combo)
         settings_layout.addRow("Preset", self.preset_combo)
+        settings_layout.addRow("Tune", preset_button_row)
         settings_layout.addRow("Style", self.style_combo)
         settings_layout.addRow("Mic", self.mic_combo)
         settings_layout.addRow("Remote", self.remote_combo)
@@ -199,6 +248,10 @@ class MeetingDashboard(QMainWindow):
         right_layout.addWidget(self.queue_label)
         right_layout.addWidget(self.latency_label)
         right_layout.addWidget(self.performance_label)
+        right_layout.addWidget(QLabel("Latency Window"))
+        right_layout.addWidget(self.performance_window_label)
+        right_layout.addWidget(self.performance_source_label)
+        right_layout.addLayout(performance_grid)
         right_layout.addWidget(QLabel("Audio Levels"))
         right_layout.addLayout(_meter_row(self.mic_level_label, self.mic_level_bar))
         right_layout.addLayout(_meter_row(self.remote_level_label, self.remote_level_bar))
@@ -257,15 +310,24 @@ class MeetingDashboard(QMainWindow):
                 border-radius: 3px;
                 background: #2878D7;
             }
+            QPushButton:checked {
+                background: #DCEBFF;
+                border-color: #2878D7;
+                color: #154A86;
+                font-weight: 600;
+            }
             """
         )
         self.set_running_state(False)
+        self._update_performance_stats()
 
     def add_entry(self, entry: TranscriptEntry) -> None:
         self._entries.append(entry)
+        self._performance_entries.append(entry)
         self._add_item(entry)
         self._update_count_label()
         self._apply_filter()
+        self._update_performance_stats()
         self.history_list.scrollToBottom()
 
     def set_status(self, message: str) -> None:
@@ -292,6 +354,11 @@ class MeetingDashboard(QMainWindow):
 
     def set_performance(self, label: str) -> None:
         self.performance_label.setText(f"Performance: {label or 'n/a'}")
+
+    def reset_performance_stats(self, reason: str = "Latency window reset") -> None:
+        self._performance_entries.clear()
+        self.set_performance(reason)
+        self._update_performance_stats()
 
     def set_audio_level(self, track_type: str, rms: float, in_speech: bool) -> None:
         if track_type == "mic":
@@ -407,6 +474,8 @@ class MeetingDashboard(QMainWindow):
         self.model_label.setText(
             f"Ollama: {self.config.ollama_model} | Profile: {self.config.meeting_profile} | Preset: {self.config.model_preset}"
         )
+        self._sync_preset_buttons()
+        self._update_performance_stats()
 
         for widget in widgets:
             widget.blockSignals(False)
@@ -444,6 +513,7 @@ class MeetingDashboard(QMainWindow):
         self.vad_sensitivity_slider.valueChanged.connect(self._on_vad_sensitivity_changed)
 
     def _emit_settings_changed(self) -> None:
+        self._sync_preset_buttons()
         self.settings_changed.emit(
             {
                 "profile": self.profile_combo.currentData(),
@@ -464,6 +534,37 @@ class MeetingDashboard(QMainWindow):
     def _on_vad_sensitivity_changed(self, value: int) -> None:
         self._update_vad_sensitivity_label(value)
         self._emit_settings_changed()
+
+    def _select_quick_preset(self, preset: str) -> None:
+        self._select_combo_value(self.preset_combo, preset)
+        self._sync_preset_buttons()
+
+    def _sync_preset_buttons(self) -> None:
+        current = self.preset_combo.currentData()
+        for button, preset in self._preset_buttons:
+            button.blockSignals(True)
+            button.setChecked(current == preset)
+            button.blockSignals(False)
+
+    def _update_performance_stats(self) -> None:
+        stats = build_performance_stats(
+            self._performance_entries,
+            preset=self.config.model_preset,
+            window_size=self.performance_window_size,
+        )
+        self.performance_window_label.setText(
+            f"Recent translated sentences: {stats.sample_count}/{stats.window_size}"
+        )
+        self.performance_source_label.setText(format_source_mix(stats))
+        metrics: dict[str, LatencyMetricStats] = {
+            "asr": stats.asr,
+            "llm": stats.llm,
+            "queue": stats.queue,
+            "total": stats.total,
+        }
+        for key, metric in metrics.items():
+            self.performance_metric_labels[key].setText(format_metric_line(metric))
+            self.performance_metric_bars[key].setValue(metric_progress_percent(metric))
 
     def _update_vad_sensitivity_label(self, value: int) -> None:
         self.vad_sensitivity_label.setText(str(value))

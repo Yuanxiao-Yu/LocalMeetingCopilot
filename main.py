@@ -39,6 +39,41 @@ from ui.dashboard_window import MeetingDashboard
 from ui.overlay_window import SubtitleOverlay
 
 
+def apply_dashboard_settings(
+    config: AppConfig,
+    settings: dict[str, object],
+    speaker_aliases: dict[str, str],
+) -> tuple[bool, bool]:
+    previous_model = config.asr_model_size
+    previous_tuning = (
+        config.meeting_profile,
+        config.model_preset,
+        config.translation_style,
+    )
+    requested_preset = str(settings["preset"])
+    preset_changed = requested_preset != config.model_preset
+    apply_meeting_profile(config, str(settings["profile"]))
+    apply_model_preset(config, requested_preset)
+    if not preset_changed:
+        apply_vad_sensitivity(config, int(settings["vad_sensitivity"]))
+    config.translation_style = str(settings["style"])
+    config.mic_device_index = settings["mic_device_index"]  # type: ignore[assignment]
+    config.remote_device_index = settings["remote_device_index"]  # type: ignore[assignment]
+    config.capture_mic_enabled = bool(settings["capture_mic_enabled"])
+    config.capture_remote_enabled = bool(settings["capture_remote_enabled"])
+    config.save_reports_enabled = bool(settings["save_reports_enabled"])
+    config.privacy_mode = bool(settings["privacy_mode"])
+    config.debug_audio_enabled = bool(settings["debug_audio_enabled"])
+    config.auto_summary_on_end = bool(settings["auto_summary_on_end"])
+    config.speaker_aliases = dict(speaker_aliases)
+    current_tuning = (
+        config.meeting_profile,
+        config.model_preset,
+        config.translation_style,
+    )
+    return previous_model != config.asr_model_size, current_tuning != previous_tuning
+
+
 class WorkerSignals(QObject):
     status = Signal(str)
     draft_ready = Signal(object)
@@ -624,22 +659,17 @@ class MeetingAppController(QObject):
 
     @Slot(object)
     def _on_dashboard_settings_changed(self, settings: dict[str, object]) -> None:
-        previous_model = self.config.asr_model_size
-        apply_meeting_profile(self.config, str(settings["profile"]))
-        apply_model_preset(self.config, str(settings["preset"]))
-        apply_vad_sensitivity(self.config, int(settings["vad_sensitivity"]))
-        self.config.translation_style = str(settings["style"])
-        self.config.mic_device_index = settings["mic_device_index"]  # type: ignore[assignment]
-        self.config.remote_device_index = settings["remote_device_index"]  # type: ignore[assignment]
-        self.config.capture_mic_enabled = bool(settings["capture_mic_enabled"])
-        self.config.capture_remote_enabled = bool(settings["capture_remote_enabled"])
-        self.config.save_reports_enabled = bool(settings["save_reports_enabled"])
-        self.config.privacy_mode = bool(settings["privacy_mode"])
-        self.config.debug_audio_enabled = bool(settings["debug_audio_enabled"])
-        self.config.auto_summary_on_end = bool(settings["auto_summary_on_end"])
-        self.config.speaker_aliases = dict(self.speaker_aliases)
+        model_changed, tuning_changed = apply_dashboard_settings(
+            self.config,
+            settings,
+            self.speaker_aliases,
+        )
         self.dashboard.sync_from_config()
-        if previous_model != self.config.asr_model_size and not self._running_source:
+        if tuning_changed:
+            self.dashboard.reset_performance_stats(
+                f"Latency window reset for {self.config.meeting_profile}/{self.config.model_preset}/{self.config.translation_style}"
+            )
+        if model_changed and not self._running_source:
             self.asr_engine = ASREngine(self.config)
         self._save_runtime_settings()
         note = "Settings updated and saved"
