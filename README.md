@@ -14,6 +14,7 @@ Read this guide in:
 cd /Users/yuanxiaoyu/projects/LocalMeetingCopilot
 source .venv/bin/activate
 python run.py --check
+python run.py --model-check --profile de
 python run.py --mock
 ```
 
@@ -60,6 +61,16 @@ python run.py --wav /absolute/path/to/meeting.wav
 
 The first WAV run may download a faster-whisper model into `models/`.
 
+## Model Preflight
+
+Check local ASR and Ollama models before a real meeting:
+
+```bash
+python run.py --model-check --profile de --preset fast --style meeting
+```
+
+The command checks Python packages, the faster-whisper cache under `models/`, the Ollama CLI, and the configured Ollama model. It does not download anything automatically; if something is missing, it exits non-zero and prints the exact fix command, such as `ollama pull qwen2.5:3b-instruct`.
+
 ## Diagnostics Bundle
 
 When a Windows or macOS machine behaves differently from yours, run:
@@ -68,7 +79,7 @@ When a Windows or macOS machine behaves differently from yours, run:
 python run.py --doctor --profile de --preset fast --style meeting
 ```
 
-This writes a shareable folder under `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` with `report.md`, `system.json`, `audio_devices.json`, `ollama.json`, `config.json`, `git.txt`, and `python_packages.txt`. The bundle records environment metadata, device names, selected audio indexes, Ollama health, Git status, and recent log file names only. It does not record audio or transcript contents.
+This writes a shareable folder under `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` with `report.md`, `system.json`, `audio_devices.json`, `ollama.json`, `models.json`, `config.json`, `git.txt`, and `python_packages.txt`. The bundle records environment metadata, device names, selected audio indexes, Ollama health, model preflight status, Git status, and recent log file names only. It does not record audio or transcript contents.
 
 ## Audio Test And Crash Logs
 
@@ -301,11 +312,12 @@ On macOS, `python run.py --live` intentionally reports that Windows WASAPI loopb
 
 1. Install Python 3.11 x64, Ollama, and the same Python requirements.
 2. Run `python run.py --check` and confirm Ollama plus input devices are visible.
-3. If anything looks wrong, run `python run.py --doctor --profile de` and share the generated `report.md` plus JSON files.
-4. Run `python run.py --mock` to verify UI and translation first.
-5. Run `python run.py --live` in a real Teams/Zoom call.
-6. Confirm `[Me]` maps to the local microphone and remote audio maps to loopback.
-7. Confirm active speaker OCR. If it fails, the transcript should still fall back to `[Remote Participant]`.
+3. Run `python run.py --model-check --profile de` and follow any printed fix commands.
+4. If anything looks wrong, run `python run.py --doctor --profile de` and share the generated `report.md` plus JSON files.
+5. Run `python run.py --mock` to verify UI and translation first.
+6. Run `python run.py --live` in a real Teams/Zoom call.
+7. Confirm `[Me]` maps to the local microphone and remote audio maps to loopback.
+8. Confirm active speaker OCR. If it fails, the transcript should still fall back to `[Remote Participant]`.
 
 ## Privacy
 
@@ -321,6 +333,7 @@ LocalMeetingCopilot 是一个本地优先的桌面会议助手，主要服务于
 cd /Users/yuanxiaoyu/projects/LocalMeetingCopilot
 source .venv/bin/activate
 python run.py --check
+python run.py --model-check --profile de
 python run.py --mock
 ```
 
@@ -343,6 +356,16 @@ export LMC_MIC_DEVICE_INDEX=0
 python run.py --mic
 ```
 
+## 模型预检
+
+进入真实会议前，先检查本地 ASR 和 Ollama 模型：
+
+```bash
+python run.py --model-check --profile de --preset fast --style meeting
+```
+
+这个命令会检查 Python package、`models/` 下的 faster-whisper 缓存、Ollama CLI，以及当前配置的 Ollama 模型。它不会自动下载任何东西；如果缺模型，会返回非 0，并打印明确修复命令，例如 `ollama pull qwen2.5:3b-instruct`。
+
 ## 诊断包
 
 如果你的朋友在 Windows 或 macOS 上遇到和你本机不一样的问题，可以让她运行：
@@ -351,7 +374,7 @@ python run.py --mic
 python run.py --doctor --profile de --preset fast --style meeting
 ```
 
-命令会在 `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` 下生成一个可分享的诊断文件夹，包含 `report.md`、`system.json`、`audio_devices.json`、`ollama.json`、`config.json`、`git.txt` 和 `python_packages.txt`。诊断包只记录环境元信息、设备名称、当前音频 index、Ollama 状态、Git 状态和最近日志文件名，不录音，也不会读取逐字稿内容。
+命令会在 `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` 下生成一个可分享的诊断文件夹，包含 `report.md`、`system.json`、`audio_devices.json`、`ollama.json`、`models.json`、`config.json`、`git.txt` 和 `python_packages.txt`。诊断包只记录环境元信息、设备名称、当前音频 index、Ollama 状态、模型预检状态、Git 状态和最近日志文件名，不录音，也不会读取逐字稿内容。
 
 ## 音频测试与闪退日志
 
@@ -628,11 +651,12 @@ python run.py --mac-live --profile de
 
 1. 安装 Python 3.11 x64、Ollama 和 Python requirements。
 2. 运行 `python run.py --check`，确认 Ollama、麦克风、loopback 设备可见。
-3. 如果环境不对，运行 `python run.py --doctor --profile de`，把生成的 `report.md` 和 JSON 文件发回来。
-4. 先运行 `python run.py --mock` 验证 UI 和翻译。
-5. 在真实 Teams/Zoom 会议中运行 `python run.py --live --profile de`。
-6. 确认 `[Me]` 对应本地麦克风，远端发言对应 loopback。
-7. 确认 Teams/Zoom 说话人 OCR。如果失败，逐字稿仍会 fallback 到 `Remote Participant`。
+3. 运行 `python run.py --model-check --profile de`，按输出里的 fix command 修复缺失模型。
+4. 如果环境不对，运行 `python run.py --doctor --profile de`，把生成的 `report.md` 和 JSON 文件发回来。
+5. 先运行 `python run.py --mock` 验证 UI 和翻译。
+6. 在真实 Teams/Zoom 会议中运行 `python run.py --live --profile de`。
+7. 确认 `[Me]` 对应本地麦克风，远端发言对应 loopback。
+8. 确认 Teams/Zoom 说话人 OCR。如果失败，逐字稿仍会 fallback 到 `Remote Participant`。
 
 ## 隐私
 
