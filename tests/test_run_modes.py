@@ -48,3 +48,10 @@ def test_parse_audio_test_flags() -> None:
     assert args.audio_test
     assert args.audio_test_seconds == 3
     assert args.no_mic_track
+
+
+def test_parse_model_check_flag() -> None:
+    args = parse_args(["--model-check", "--preset", "fast"])
+
+    assert args.model_check
+    assert args.preset == "fast"

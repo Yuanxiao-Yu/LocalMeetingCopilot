@@ -34,6 +34,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--no-remote-track", action="store_true", help="Disable remote/loopback track")
     parser.add_argument("--check", action="store_true", help="Run environment checks and exit")
     parser.add_argument("--doctor", action="store_true", help="Write a shareable diagnostics bundle")
+    parser.add_argument("--model-check", action="store_true", help="Check local ASR/Ollama models and exit")
     parser.add_argument("--audio-test", action="store_true", help="Run audio/VAD calibration and exit")
     parser.add_argument("--audio-test-seconds", type=float, default=12.0, help="Audio test duration")
     parser.add_argument("--no-autostart", dest="autostart", action="store_false")
@@ -56,6 +57,10 @@ def main() -> int:
         from audio_test import run_audio_test
 
         return run_audio_test(config=_runtime_config_from_args(args), duration_seconds=args.audio_test_seconds)
+    if args.model_check:
+        from model_manager import run_model_check
+
+        return run_model_check(config=_runtime_config_from_args(args))
     if args.doctor:
         from diagnostics import run_doctor
 
