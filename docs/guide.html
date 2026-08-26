@@ -312,6 +312,7 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
           <ul>
             <li><code>Profile</code>: German, English, or German + English.</li>
             <li><code>Preset</code>: fast, balanced, or accurate.</li>
+            <li><code>Tune</code>: quick fast / balanced / accurate buttons for live latency comparison.</li>
             <li><code>Style</code>: literal, meeting-note, or natural Chinese.</li>
             <li>Choose mic and remote input devices before pressing Start.</li>
             <li>Toggle mic/remote tracks, report saving, privacy mode, and debug WAV.</li>
@@ -319,6 +320,7 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
             <li>Latency shows ASR, LLM, and total time per translated sentence.</li>
             <li>Audio meters show live Mic/Remote RMS level and VAD speech/idle state.</li>
             <li>Performance shows the latest final subtitle timeline; JSONL records are written to <code>logs/performance/</code> when privacy mode is off.</li>
+            <li>Latency Window shows rolling ASR, LLM, queue, and total avg/p95/max with target bars for the current tuning window.</li>
             <li>Select a transcript row to rename <code>Remote Participant</code>; the alias is remembered for future speech.</li>
             <li>Runtime choices are saved to local <code>settings.json</code> and restored on the next launch.</li>
           </ul>
@@ -328,6 +330,7 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
           <ul>
             <li><code>Profile</code>：德语、英语、德英混合。</li>
             <li><code>Preset</code>：fast、balanced、accurate。</li>
+            <li><code>Tune</code>：快速切换 fast / balanced / accurate，方便实时比较延迟。</li>
             <li><code>Style</code>：精准直译、会议纪要风、自然中文。</li>
             <li>建议点击 Start 前先选好麦克风和远端输入设备。</li>
             <li>可以开关本地/远端轨道、报告保存、隐私模式和 debug WAV。</li>
@@ -335,6 +338,7 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
             <li>延迟诊断会显示每句话的 ASR、LLM 和总耗时。</li>
             <li>Audio meters 会显示 Mic/Remote 的实时 RMS 音量和 VAD speech/idle 状态。</li>
             <li>Performance 会显示最新完整字幕的时间线；隐私模式关闭时，JSONL 会写到 <code>logs/performance/</code>。</li>
+            <li>Latency Window 会显示当前调参窗口内 ASR、LLM、queue、total 的平均、p95、最大值和目标进度条。</li>
             <li>选中逐字稿后可以把 <code>Remote Participant</code> 改成真实姓名，后续会自动记住。</li>
             <li>运行时选择会保存到本地 <code>settings.json</code>，下次启动自动恢复。</li>
           </ul>

@@ -105,6 +105,7 @@ The dashboard control panel now exposes the most useful runtime switches:
 
 - Profile: `de`, `en`, or `de-en`.
 - Preset: `fast`, `balanced`, or `accurate`.
+- Tune buttons: quick `fast` / `balanced` / `accurate` switches for live latency comparison.
 - Style: `literal`, `meeting`, or `natural` Chinese translation.
 - Mic and Remote input device selectors.
 - Track toggles for local mic and remote audio.
@@ -114,6 +115,7 @@ The dashboard control panel now exposes the most useful runtime switches:
 - Latency diagnostics showing ASR, LLM, and total time per translated sentence.
 - Live audio meters for Mic and Remote, including VAD speech/idle state.
 - Performance timeline summary for the latest final subtitle.
+- Latency Window with rolling ASR/LLM/Queue/Total avg, p95, max, and target bars for the current tuning window.
 - Speaker correction: select a transcript row, rename `Remote Participant`, and apply it to future matching speech.
 - Runtime settings are saved to `settings.json` and restored on the next launch.
 
@@ -246,10 +248,12 @@ The startup status shows the real backend as `VAD: silero` or `VAD: energy`.
 - Auto summary on End with instant local preview and Ollama refinement.
 - Transcript filters for all speakers, [Me], remote speakers, and task-like entries.
 - Dashboard controls for profile, preset, style, devices, tracks, privacy, and debug audio.
+- Quick tuning buttons for `fast`, `balanced`, and `accurate`.
 - Dashboard VAD sensitivity control.
 - Saved runtime settings through local `settings.json`.
 - Speaker correction and future speaker alias memory in the dashboard.
 - Latency diagnostics for ASR, LLM, and total sentence time.
+- Rolling latency distribution for ASR, LLM, queue, and total response time.
 - Custom vocabulary injection through `profiles/custom_terms.txt`.
 - Common ASR hallucination phrase filtering.
 - Partial subtitles during active speech, followed by final translated subtitles.
@@ -440,6 +444,7 @@ Dashboard 现在可以直接配置常用运行参数：
 
 - Profile：`de` 纯德语、`en` 纯英语、`de-en` 德英混合。
 - Preset：`fast`、`balanced`、`accurate` 三档速度/准确率。
+- Tune 快捷按钮：快速切换 `fast` / `balanced` / `accurate`，方便直接比较延迟。
 - Style：`literal` 精准直译、`meeting` 会议纪要风、`natural` 自然中文。
 - Mic 和 Remote 输入设备选择。
 - 本地麦克风轨道和远端音频轨道开关。
@@ -449,6 +454,7 @@ Dashboard 现在可以直接配置常用运行参数：
 - 每句话的 ASR、LLM、总延迟显示。
 - Mic 和 Remote 实时音量条，并显示 VAD 当前是 speech 还是 idle。
 - 最新完整字幕的 performance timeline 摘要。
+- Latency Window 会显示当前调参窗口内 ASR、LLM、Queue、Total 的平均、p95、最大值和目标进度条。
 - 说话人修正：选中逐字稿行，把 `Remote Participant` 改成真实姓名，后续相同说话人会自动沿用。
 - 运行时设置会保存到 `settings.json`，下次启动自动恢复。
 
@@ -583,10 +589,12 @@ python run.py --mac-live --profile de
 - End 后自动总结：先出本地预览，再用 Ollama 精修。
 - `[Me]`、Remote、Tasks 等过滤。
 - Profile、Preset、Style、设备、轨道、隐私、debug 音频控制。
+- `fast`、`balanced`、`accurate` 快捷调参按钮。
 - Dashboard VAD 灵敏度控制。
 - 通过本地 `settings.json` 保存运行时设置。
 - Dashboard 里修正说话人，并记住后续同名发言。
 - ASR/LLM/总耗时延迟诊断。
+- ASR、LLM、queue、总响应耗时的 rolling latency 分布。
 - 自定义词库注入。
 - 常见 ASR 幻听短语过滤。
 - 说话中的 partial 临时字幕，完整句结束后再显示精修翻译。
