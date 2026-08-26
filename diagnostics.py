@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from config import AppConfig, load_config
+from model_manager import collect_model_preflight
 
 CommandResult = dict[str, Any]
 
@@ -38,6 +39,7 @@ def create_diagnostics_bundle(config: AppConfig, output_dir: str | Path | None =
     packages = safe_run([sys.executable, "-m", "pip", "freeze"], timeout=20)
     audio = collect_audio_info(config)
     ollama = collect_ollama_info(config)
+    models = collect_model_info(config)
     acceleration = collect_acceleration_info(config)
     recent_logs = collect_recent_logs(config.log_dir)
 
@@ -45,6 +47,7 @@ def create_diagnostics_bundle(config: AppConfig, output_dir: str | Path | None =
     _write_json(bundle_dir / "config.json", cfg)
     _write_json(bundle_dir / "audio_devices.json", audio)
     _write_json(bundle_dir / "ollama.json", ollama)
+    _write_json(bundle_dir / "models.json", models)
     _write_json(bundle_dir / "acceleration.json", acceleration)
     _write_text(bundle_dir / "git.txt", command_result_text(git))
     _write_text(bundle_dir / "python_packages.txt", command_result_text(packages))
@@ -58,6 +61,7 @@ def create_diagnostics_bundle(config: AppConfig, output_dir: str | Path | None =
             "python_packages": packages,
             "audio": audio,
             "ollama": ollama,
+            "models": models,
             "acceleration": acceleration,
             "recent_logs": recent_logs,
         }
@@ -246,6 +250,10 @@ def collect_ollama_info(config: AppConfig) -> dict[str, Any]:
     }
 
 
+def collect_model_info(config: AppConfig) -> dict[str, Any]:
+    return collect_model_preflight(config)
+
+
 def collect_acceleration_info(config: AppConfig) -> dict[str, Any]:
     result = safe_run(
         ["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader"],
@@ -360,6 +368,7 @@ def render_report(data: dict[str, Any]) -> str:
     packages = data["python_packages"]
     audio = data["audio"]
     ollama = data["ollama"]
+    models = data["models"]
     acceleration = data["acceleration"]
     recent_logs = data["recent_logs"]
     git_status = _stdout_from_nested_command(git, "status") or "(empty)"
@@ -407,6 +416,10 @@ def render_report(data: dict[str, Any]) -> str:
         f"- Model present in `ollama list`: {ollama['model_present_in_list']}",
         f"- CLI version return code: {ollama['cli_version'].get('returncode')}",
         "",
+        "## Models",
+        f"- Overall: {'OK' if models.get('ok') else 'needs attention'}",
+        *_model_report_lines(models),
+        "",
         "## Acceleration",
         f"- NVIDIA detected: {acceleration['nvidia_detected']}",
         f"- Apple Silicon: {acceleration['apple_silicon']}",
@@ -429,6 +442,18 @@ def render_report(data: dict[str, Any]) -> str:
 def _stdout_from_nested_command(result: CommandResult, key: str) -> str:
     command = result.get("commands", {}).get(key, {})
     return str(command.get("stdout") or "").strip()
+
+
+def _model_report_lines(models: dict[str, Any]) -> list[str]:
+    lines = []
+    for check in models.get("checks", []):
+        marker = "OK" if check.get("available") else "MISSING"
+        label = check.get("label", "unknown")
+        required = check.get("required", "")
+        lines.append(f"- {marker} {label}: {required}")
+        if not check.get("available") and check.get("fix_command"):
+            lines.append(f"  - fix: `{check['fix_command']}`")
+    return lines
 
 
 def _sounddevice_device_by_index(

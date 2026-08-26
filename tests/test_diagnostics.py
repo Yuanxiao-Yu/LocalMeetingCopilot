@@ -177,6 +177,22 @@ def test_create_diagnostics_bundle_writes_core_files(monkeypatch, tmp_path) -> N
     )
     monkeypatch.setattr(
         diagnostics,
+        "collect_model_info",
+        lambda _config: {
+            "ok": True,
+            "checks": [
+                {
+                    "label": "faster-whisper ASR model cache",
+                    "required": "base",
+                    "available": True,
+                    "fix_command": "",
+                }
+            ],
+            "fix_commands": [],
+        },
+    )
+    monkeypatch.setattr(
+        diagnostics,
         "collect_acceleration_info",
         lambda _config: {"nvidia_detected": False, "apple_silicon": False, "hint": "CPU"},
     )
@@ -196,6 +212,7 @@ def test_create_diagnostics_bundle_writes_core_files(monkeypatch, tmp_path) -> N
     assert (bundle / "system.json").exists()
     assert (bundle / "audio_devices.json").exists()
     assert (bundle / "ollama.json").exists()
+    assert (bundle / "models.json").exists()
     assert (bundle / "config.json").exists()
     assert (bundle / "git.txt").exists()
     assert (bundle / "python_packages.txt").exists()
