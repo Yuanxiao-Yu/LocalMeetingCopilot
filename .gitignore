@@ -13,6 +13,7 @@ logs/*.md
 logs/crash/
 logs/diagnostics/
 logs/performance/
+logs/support/
 models/*
 !models/.gitkeep
 !logs/.gitkeep

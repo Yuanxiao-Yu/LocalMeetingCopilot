@@ -37,6 +37,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--model-check", action="store_true", help="Check local ASR/Ollama models and exit")
     parser.add_argument("--audio-test", action="store_true", help="Run audio/VAD calibration and exit")
     parser.add_argument("--audio-test-seconds", type=float, default=12.0, help="Audio test duration")
+    parser.add_argument("--support-bundle", action="store_true", help="Write a zipped support bundle")
+    parser.add_argument(
+        "--support-include-audio-test",
+        action="store_true",
+        help="Include a short live audio/VAD test in the support bundle",
+    )
     parser.add_argument("--no-autostart", dest="autostart", action="store_false")
     parser.set_defaults(autostart=True)
     args = parser.parse_args(argv)
@@ -53,6 +59,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.support_bundle:
+        from support_bundle import run_support_bundle
+
+        return run_support_bundle(
+            config=_runtime_config_from_args(args),
+            include_audio_test=args.support_include_audio_test,
+            audio_test_seconds=args.audio_test_seconds,
+        )
     if args.audio_test:
         from audio_test import run_audio_test
 

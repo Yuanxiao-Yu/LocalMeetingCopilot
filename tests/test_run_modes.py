@@ -55,3 +55,18 @@ def test_parse_model_check_flag() -> None:
 
     assert args.model_check
     assert args.preset == "fast"
+
+
+def test_parse_support_bundle_flags() -> None:
+    args = parse_args(
+        [
+            "--support-bundle",
+            "--support-include-audio-test",
+            "--audio-test-seconds",
+            "4",
+        ]
+    )
+
+    assert args.support_bundle
+    assert args.support_include_audio_test
+    assert args.audio_test_seconds == 4
