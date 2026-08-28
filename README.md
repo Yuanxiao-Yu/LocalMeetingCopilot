@@ -81,6 +81,20 @@ python run.py --doctor --profile de --preset fast --style meeting
 
 This writes a shareable folder under `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` with `report.md`, `system.json`, `audio_devices.json`, `ollama.json`, `models.json`, `config.json`, `git.txt`, and `python_packages.txt`. The bundle records environment metadata, device names, selected audio indexes, Ollama health, model preflight status, Git status, and recent log file names only. It does not record audio or transcript contents.
 
+## Support Bundle
+
+For remote debugging, ask the tester to run one command:
+
+```bash
+python run.py --support-bundle --profile de --preset fast --style meeting
+```
+
+This creates `logs/support/support_YYYYMMDD_HHMMSS.zip` with captured `--check`, `--model-check`, and doctor outputs. It does not listen to the microphone by default. If audio/VAD calibration is needed, explicitly include it:
+
+```bash
+python run.py --support-bundle --profile de --support-include-audio-test --audio-test-seconds 8
+```
+
 ## Audio Test And Crash Logs
 
 Before joining a real call, run a short audio/VAD calibration:
@@ -317,7 +331,7 @@ On macOS, `python run.py --live` intentionally reports that Windows WASAPI loopb
 1. Install Python 3.11 x64, Ollama, and the same Python requirements.
 2. Run `python run.py --check` and confirm Ollama plus input devices are visible.
 3. Run `python run.py --model-check --profile de` and follow any printed fix commands.
-4. If anything looks wrong, run `python run.py --doctor --profile de` and share the generated `report.md` plus JSON files.
+4. If anything looks wrong, run `python run.py --support-bundle --profile de` and share the generated zip.
 5. Run `python run.py --mock` to verify UI and translation first.
 6. Run `python run.py --live` in a real Teams/Zoom call.
 7. Confirm `[Me]` maps to the local microphone and remote audio maps to loopback.
@@ -379,6 +393,20 @@ python run.py --doctor --profile de --preset fast --style meeting
 ```
 
 命令会在 `logs/diagnostics/diagnostic_YYYYMMDD_HHMMSS/` 下生成一个可分享的诊断文件夹，包含 `report.md`、`system.json`、`audio_devices.json`、`ollama.json`、`models.json`、`config.json`、`git.txt` 和 `python_packages.txt`。诊断包只记录环境元信息、设备名称、当前音频 index、Ollama 状态、模型预检状态、Git 状态和最近日志文件名，不录音，也不会读取逐字稿内容。
+
+## Support Bundle
+
+远程排查时，可以让测试者只跑一个命令：
+
+```bash
+python run.py --support-bundle --profile de --preset fast --style meeting
+```
+
+它会生成 `logs/support/support_YYYYMMDD_HHMMSS.zip`，里面包含 `--check`、`--model-check` 和 doctor 输出。默认不会监听麦克风。如果需要同时做音频/VAD 校准，需要显式开启：
+
+```bash
+python run.py --support-bundle --profile de --support-include-audio-test --audio-test-seconds 8
+```
 
 ## 音频测试与闪退日志
 
@@ -660,7 +688,7 @@ python run.py --mac-live --profile de
 1. 安装 Python 3.11 x64、Ollama 和 Python requirements。
 2. 运行 `python run.py --check`，确认 Ollama、麦克风、loopback 设备可见。
 3. 运行 `python run.py --model-check --profile de`，按输出里的 fix command 修复缺失模型。
-4. 如果环境不对，运行 `python run.py --doctor --profile de`，把生成的 `report.md` 和 JSON 文件发回来。
+4. 如果环境不对，运行 `python run.py --support-bundle --profile de`，把生成的 zip 发回来。
 5. 先运行 `python run.py --mock` 验证 UI 和翻译。
 6. 在真实 Teams/Zoom 会议中运行 `python run.py --live --profile de`。
 7. 确认 `[Me]` 对应本地麦克风，远端发言对应 loopback。

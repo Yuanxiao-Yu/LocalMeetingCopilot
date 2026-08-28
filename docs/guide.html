@@ -152,6 +152,7 @@
         <a href="#start">Quick Start / 快速开始</a>
         <a href="#models">Models / 模型</a>
         <a href="#doctor">Doctor / 诊断</a>
+        <a href="#support">Support / 支持包</a>
         <a href="#audio-test">Audio Test / 音频测试</a>
         <a href="#mac">macOS</a>
         <a href="#windows">Windows</a>
@@ -226,6 +227,26 @@ python run.py --mock</code></pre>
       </div>
     </section>
 
+    <section id="support">
+      <h2>Support Bundle / 支持包</h2>
+      <div class="grid">
+        <div class="lang">
+          <div class="lang-title">English</div>
+          <p>For remote debugging, generate one zipped bundle with environment check, model preflight, and doctor output.</p>
+          <pre><code>python run.py --support-bundle --profile de --preset fast --style meeting</code></pre>
+          <p>The zip is written to <code>logs/support/support_YYYYMMDD_HHMMSS.zip</code>. It does not listen to the microphone unless audio test is explicitly included.</p>
+          <pre><code>python run.py --support-bundle --profile de --support-include-audio-test --audio-test-seconds 8</code></pre>
+        </div>
+        <div class="lang">
+          <div class="lang-title">中文</div>
+          <p>远程排查时，用一个命令生成 zip，里面包含环境自检、模型预检和 doctor 输出。</p>
+          <pre><code>python run.py --support-bundle --profile de --preset fast --style meeting</code></pre>
+          <p>zip 会写到 <code>logs/support/support_YYYYMMDD_HHMMSS.zip</code>。默认不会监听麦克风；只有显式开启 audio test 时才会做音频/VAD 校准。</p>
+          <pre><code>python run.py --support-bundle --profile de --support-include-audio-test --audio-test-seconds 8</code></pre>
+        </div>
+      </div>
+    </section>
+
     <section id="audio-test">
       <h2>Audio Test And Crash Logs / 音频测试与闪退日志</h2>
       <div class="grid">
@@ -284,7 +305,7 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe run.py --check
 .\.venv\Scripts\python.exe run.py --model-check --profile de
-.\.venv\Scripts\python.exe run.py --doctor --profile de
+.\.venv\Scripts\python.exe run.py --support-bundle --profile de
 .\.venv\Scripts\python.exe run.py --live --profile de</code></pre>
           <p>If PowerShell blocks scripts:</p>
           <pre><code>powershell -ExecutionPolicy Bypass -File .\scripts\windows_smoke.ps1 -Profile de</code></pre>
@@ -296,7 +317,7 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe run.py --check
 .\.venv\Scripts\python.exe run.py --model-check --profile de
-.\.venv\Scripts\python.exe run.py --doctor --profile de
+.\.venv\Scripts\python.exe run.py --support-bundle --profile de
 .\.venv\Scripts\python.exe run.py --live --profile de</code></pre>
           <p>如果 PowerShell 执行策略拦截脚本：</p>
           <pre><code>powershell -ExecutionPolicy Bypass -File .\scripts\windows_smoke.ps1 -Profile de</code></pre>
