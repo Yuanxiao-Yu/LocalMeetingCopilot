@@ -382,6 +382,11 @@ python run.py --mac-live --profile de --preset fast --style meeting</code></pre>
   zh: 客户表
   category: data
   priority: high</code></pre>
+          <p>Use helper commands to search, add, or import glossary terms without hand-editing YAML.</p>
+          <pre><code>python run.py --glossary-search "Bitte pruefen Sie die Kunden Tabelle." --profile de
+python run.py --glossary-add "Kundentabelle" --glossary-zh "客户表" --glossary-variants "Kunden Tabelle,customer table" --glossary-category data --glossary-priority high --glossary-profiles de,de-en
+python run.py --glossary-import /absolute/path/to/terms.csv</code></pre>
+          <p>CSV imports accept <code>source</code>, <code>zh</code> or <code>target_zh</code>, <code>variants</code>, <code>category</code>, <code>priority</code>, and <code>profiles</code>. Existing sources are updated in place.</p>
           <p>Optional Silero VAD is used automatically when installed; otherwise the built-in energy VAD remains active.</p>
           <pre><code>python -m pip install -r requirements-vad.txt
 export LMC_VAD_MODE=auto</code></pre>
@@ -401,6 +406,11 @@ export LMC_VAD_MODE=auto</code></pre>
   zh: 客户表
   category: data
   priority: high</code></pre>
+          <p>可以用辅助命令搜索、添加或导入术语，不需要手动改 YAML。</p>
+          <pre><code>python run.py --glossary-search "Bitte pruefen Sie die Kunden Tabelle." --profile de
+python run.py --glossary-add "Kundentabelle" --glossary-zh "客户表" --glossary-variants "Kunden Tabelle,customer table" --glossary-category data --glossary-priority high --glossary-profiles de,de-en
+python run.py --glossary-import /absolute/path/to/terms.csv</code></pre>
+          <p>CSV 导入支持 <code>source</code>、<code>zh</code> 或 <code>target_zh</code>、<code>variants</code>、<code>category</code>、<code>priority</code>、<code>profiles</code>。已有 source 会原地更新。</p>
           <p>如果安装了 Silero VAD，默认会自动使用；没有安装时会继续使用内置 energy VAD。</p>
           <pre><code>python -m pip install -r requirements-vad.txt
 export LMC_VAD_MODE=auto</code></pre>

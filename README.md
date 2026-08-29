@@ -229,6 +229,16 @@ Add company names, people, project names, acronyms, and plain ASR terms to `prof
 
 The `.txt` terms still help ASR prompts and hotwords. The structured YAML glossary is matched per sentence, and only the most relevant top terms are injected into the translation prompt.
 
+Glossary helper commands:
+
+```bash
+python run.py --glossary-search "Bitte pruefen Sie die Kunden Tabelle." --profile de
+python run.py --glossary-add "Kundentabelle" --glossary-zh "客户表" --glossary-variants "Kunden Tabelle,customer table" --glossary-category data --glossary-priority high --glossary-profiles de,de-en
+python run.py --glossary-import /absolute/path/to/terms.csv
+```
+
+CSV imports accept these headers: `source`, `zh` or `target_zh`, `variants`, `category`, `priority`, and `profiles`. Multi-value fields such as `variants` and `profiles` can use commas, semicolons, or pipes. Existing `source` terms are updated in place, so imports can safely add variants or improve Chinese targets without duplicating terms.
+
 ## Benchmark Harness
 
 Put open benchmark clips under `benchmarks/audio/`, then copy and edit `benchmarks/manifest.example.json` into `benchmarks/manifest.local.json`.
@@ -583,6 +593,16 @@ profiles/terms.yaml
 ```
 
 `.txt` 词库继续用于 ASR prompt 和 hotwords。结构化 YAML 词库会按每句话动态匹配，只把最相关的 top terms 注入翻译 prompt。
+
+词库维护命令：
+
+```bash
+python run.py --glossary-search "Bitte pruefen Sie die Kunden Tabelle." --profile de
+python run.py --glossary-add "Kundentabelle" --glossary-zh "客户表" --glossary-variants "Kunden Tabelle,customer table" --glossary-category data --glossary-priority high --glossary-profiles de,de-en
+python run.py --glossary-import /absolute/path/to/terms.csv
+```
+
+CSV 导入支持这些表头：`source`、`zh` 或 `target_zh`、`variants`、`category`、`priority`、`profiles`。`variants` 和 `profiles` 这类多值字段可以用逗号、分号或竖线分隔。已有 `source` 会原地更新，所以可以安全地批量补 variants 或修正中文译法，不会重复堆术语。
 
 ## Benchmark Harness
 
