@@ -43,6 +43,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Include a short live audio/VAD test in the support bundle",
     )
+    parser.add_argument("--glossary-search", help="Search glossary matches for a sentence and exit")
+    parser.add_argument("--glossary-add", help="Add or update one structured glossary source term")
+    parser.add_argument("--glossary-zh", default="", help="Chinese target for --glossary-add")
+    parser.add_argument(
+        "--glossary-variants",
+        default="",
+        help="Comma, semicolon, or pipe separated variants for --glossary-add",
+    )
+    parser.add_argument("--glossary-category", default="general", help="Category for --glossary-add")
+    parser.add_argument(
+        "--glossary-priority",
+        choices=("low", "medium", "high"),
+        default="medium",
+        help="Priority for --glossary-add",
+    )
+    parser.add_argument(
+        "--glossary-profiles",
+        default="",
+        help="Comma, semicolon, or pipe separated profiles for --glossary-add",
+    )
+    parser.add_argument("--glossary-import", help="Import structured glossary terms from a CSV file")
+    parser.add_argument("--glossary-file", help="Override target YAML file for glossary add/import")
     parser.add_argument("--no-autostart", dest="autostart", action="store_false")
     parser.set_defaults(autostart=True)
     args = parser.parse_args(argv)
@@ -59,6 +81,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.glossary_search:
+        from glossary_manager import run_glossary_search
+
+        return run_glossary_search(
+            args.glossary_search,
+            config=_runtime_config_from_args(args),
+        )
+    if args.glossary_add:
+        from glossary_manager import run_glossary_add
+
+        return run_glossary_add(
+            source=args.glossary_add,
+            zh=args.glossary_zh,
+            variants=args.glossary_variants,
+            category=args.glossary_category,
+            priority=args.glossary_priority,
+            profiles=args.glossary_profiles,
+            config=_runtime_config_from_args(args),
+            glossary_file=args.glossary_file,
+        )
+    if args.glossary_import:
+        from glossary_manager import run_glossary_import
+
+        return run_glossary_import(
+            args.glossary_import,
+            config=_runtime_config_from_args(args),
+            glossary_file=args.glossary_file,
+        )
     if args.support_bundle:
         from support_bundle import run_support_bundle
 
